@@ -46,9 +46,13 @@ export default function AlbumDetailPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, delay: i * 0.05, ease: [0.32, 0.72, 0, 1] }}
               className="aspect-[4/3] bg-elevated border border-border overflow-hidden cursor-pointer group relative"
-              onClick={() => item.type === "image" && setLightbox(item.id)}
+              onClick={() => item.type === "image" && item.url && setLightbox(item.url)}
             >
-              <div className="w-full h-full bg-gradient-to-br from-elevated to-border group-hover:opacity-80 transition-opacity" />
+              {item.url && item.type === "image" ? (
+                <img src={item.url} alt="" className="w-full h-full object-cover group-hover:opacity-80 transition-opacity" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-elevated to-border group-hover:opacity-80 transition-opacity" />
+              )}
               {item.type === "video" && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-14 h-14 border-2 border-accent rounded-full flex items-center justify-center">
@@ -80,9 +84,9 @@ export default function AlbumDetailPage() {
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
-              className="w-full max-w-4xl aspect-[4/3] bg-elevated border border-border"
+              className="w-full max-w-4xl max-h-[85vh]"
             >
-              <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+              <img src={lightbox} alt="" className="w-full h-full object-contain" />
             </motion.div>
           </motion.div>
         )}

@@ -24,7 +24,11 @@ export default function GalleryCard({ album, index = 0 }: GalleryCardProps) {
       <Link href={`/gallery/${album.id}`}>
         <Card className="h-full group">
           <div className="aspect-[4/3] bg-elevated mb-6 overflow-hidden relative">
-            <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+            {album.coverUrl ? (
+              <img src={album.coverUrl} alt={album.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+            )}
             {videoCount > 0 && (
               <div className="absolute bottom-3 right-3 bg-charcoal/80 px-2 py-1 flex items-center gap-1">
                 <Play size={12} className="text-accent" />
