@@ -1,18 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, X, Play } from "lucide-react";
+import { ArrowLeft, X, Play, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
-import { albums, formatDate } from "@/data/mock";
+import { formatDate } from "@/data/mock";
+import { getAlbumById } from "@/lib/album-store";
+import { type Album } from "@/data/mock";
 
 export default function AlbumDetailPage() {
   const params = useParams();
-  const album = albums.find((a) => a.id === params.id);
+  const [album, setAlbum] = useState<Album | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
+
+  useEffect(() => {
+    const a = getAlbumById(params.id as string);
+    setAlbum(a ?? null);
+  }, [params.id]);
 
   if (!album) {
     return (
@@ -63,6 +70,25 @@ export default function AlbumDetailPage() {
             </motion.div>
           ))}
         </div>
+
+        {album.gdriveLink && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="mt-10 text-center"
+          >
+            <a
+              href={album.gdriveLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 border border-border text-primary-text text-sm uppercase tracking-widest hover:bg-elevated transition-colors"
+            >
+              <ExternalLink size={16} />
+              Lihat Foto Lengkap di Google Drive
+            </a>
+          </motion.div>
+        )}
       </Section>
 
       <AnimatePresence>

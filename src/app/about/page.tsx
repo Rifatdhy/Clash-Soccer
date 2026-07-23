@@ -1,11 +1,20 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
-import { settings } from "@/data/mock";
+import { getSettings } from "@/lib/settings-store";
+import { type Setting } from "@/data/mock";
 
 export default function AboutPage() {
+  const [settings, setSettings] = useState<Setting | null>(null);
+
+  useEffect(() => {
+    setSettings(getSettings());
+  }, []);
+
+  if (!settings) return null;
   return (
     <>
       <PageHeader title="About" subtitle="Tentang Clash.Soccer — komunitas mini soccer yang lahir dari kecintaan terhadap sepak bola." />

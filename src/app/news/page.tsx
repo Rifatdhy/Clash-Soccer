@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import NewsCard from "@/components/news-card";
-import { news } from "@/data/mock";
+import { getNews } from "@/lib/news-store";
+import { type NewsItem } from "@/data/mock";
 
 export default function NewsPage() {
   const [page, setPage] = useState(1);
+  const [news, setNews] = useState<NewsItem[] | null>(null);
   const perPage = 6;
+
+  useEffect(() => {
+    setNews(getNews());
+  }, []);
+
+  if (!news) return null;
 
   return (
     <>

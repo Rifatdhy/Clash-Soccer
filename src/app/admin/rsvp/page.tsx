@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Download } from "lucide-react";
 import Card from "@/components/card";
-import { matches, rsvpData, formatDate } from "@/data/mock";
+import { matches } from "@/data/mock";
+import { getAllRsvp } from "@/lib/rsvp-store";
 
 export default function AdminRSVP() {
   const [filterMatch, setFilterMatch] = useState("all");
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const allRsvp = getAllRsvp();
 
   const filtered = filterMatch === "all"
-    ? rsvpData
-    : rsvpData.filter((r) => r.matchId === filterMatch);
+    ? allRsvp
+    : allRsvp.filter((r) => r.matchId === filterMatch);
 
   const getMatchTitle = (matchId: string) =>
     matches.find((m) => m.id === matchId)?.title || "Unknown";
@@ -21,12 +22,37 @@ export default function AdminRSVP() {
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-text">RSVP</h1>
-        <button className="flex items-center gap-2 px-4 py-2 border border-border text-sm text-primary-text uppercase tracking-widest hover:bg-elevated transition-colors">
-          <Download size={16} /> Export Excel
+        <button
+          onClick={() => {
+            const csv = [
+              ["Match", "Name", "WhatsApp", "Jersey Size", "Registered At"],
+              ...filtered.flatMap((r) =>
+                r.participants.map((p) => [
+                  getMatchTitle(r.matchId),
+                  p.name,
+                  p.whatsapp,
+                  p.jerseySize,
+                  new Date(r.registeredAt).toLocaleString("id-ID"),
+                ])
+              ),
+            ]
+              .map((row) => row.join(","))
+              .join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "rsvp-data.csv";
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="flex items-center gap-2 px-4 py-2 border border-border text-sm text-primary-text uppercase tracking-widest hover:bg-elevated transition-colors"
+        >
+          <Download size={16} /> Export CSV
         </button>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap items-center gap-4">
         <select
           value={filterMatch}
           onChange={(e) => setFilterMatch(e.target.value)}
@@ -39,43 +65,58 @@ export default function AdminRSVP() {
         </select>
       </div>
 
-      <Card hover={false} className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-secondary-text font-medium uppercase tracking-wider text-xs">Match</th>
-                <th className="text-left py-3 px-4 text-secondary-text font-medium uppercase tracking-wider text-xs">Participants</th>
-                <th className="text-left py-3 px-4 text-secondary-text font-medium uppercase tracking-wider text-xs">Date Registered</th>
-                <th className="text-right py-3 px-4 text-secondary-text font-medium uppercase tracking-wider text-xs">Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((rsvp, i) => (
-                <motion.tr
-                  key={rsvp.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="border-b border-border/50"
-                >
-                  <td className="py-3 px-4 text-primary-text">{getMatchTitle(rsvp.matchId)}</td>
-                  <td className="py-3 px-4 text-secondary-text">{rsvp.participants.length}</td>
-                  <td className="py-3 px-4 text-secondary-text">{formatDate("2026-06-20")}</td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => setExpanded(expanded === rsvp.id ? null : rsvp.id)}
-                      className="text-secondary-text hover:text-accent transition-colors"
+      {filtered.length === 0 ? (
+        <Card hover={false}>
+          <div className="text-center py-12">
+            <p className="text-secondary-text">Belum ada RSVP untuk pertandingan ini.</p>
+          </div>
+        </Card>
+      ) : (
+        <Card hover={false} className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-secondary-text font-medium uppercase tracking-wider text-xs">Match</th>
+                  <th className="text-left py-3 px-4 text-secondary-text font-medium uppercase tracking-wider text-xs">Name</th>
+                  <th className="text-left py-3 px-4 text-secondary-text font-medium uppercase tracking-wider text-xs">WhatsApp</th>
+                  <th className="text-left py-3 px-4 text-secondary-text font-medium uppercase tracking-wider text-xs">Jersey</th>
+                  <th className="text-left py-3 px-4 text-secondary-text font-medium uppercase tracking-wider text-xs">Registered</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((rsvp, i) =>
+                  rsvp.participants.map((p, pi) => (
+                    <motion.tr
+                      key={`${rsvp.id}-${pi}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: (i + pi) * 0.02 }}
+                      className="border-b border-border/50"
                     >
-                      {expanded === rsvp.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                      <td className="py-3 px-4 text-primary-text">{getMatchTitle(rsvp.matchId)}</td>
+                      <td className="py-3 px-4 text-primary-text">{p.name}</td>
+                      <td className="py-3 px-4 text-secondary-text">{p.whatsapp}</td>
+                      <td className="py-3 px-4 text-secondary-text">{p.jerseySize}</td>
+                      <td className="py-3 px-4 text-secondary-text">
+                        {new Date(rsvp.registeredAt).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-border px-4 py-3 text-xs text-secondary-text">
+            Total: {allRsvp.reduce((sum, r) => sum + r.participants.length, 0)} participants across {allRsvp.length} registrations
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

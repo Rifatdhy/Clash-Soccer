@@ -1,38 +1,54 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Card from "@/components/card";
-import { matches, rsvpData, albums, news } from "@/data/mock";
+import { rsvpData, type Match, type NewsItem } from "@/data/mock";
+import { getMatches } from "@/lib/match-store";
+import { getNews } from "@/lib/news-store";
+import { getAlbums } from "@/lib/album-store";
 import { Calendar, Users, Image, Newspaper } from "lucide-react";
 
-const stats = [
-  {
-    icon: Calendar,
-    label: "Matches",
-    value: matches.length,
-    color: "text-accent",
-  },
-  {
-    icon: Users,
-    label: "Total Participants",
-    value: rsvpData.reduce((sum, r) => sum + r.participants.length, 0),
-    color: "text-accent",
-  },
-  {
-    icon: Image,
-    label: "Albums",
-    value: albums.length,
-    color: "text-accent",
-  },
-  {
-    icon: Newspaper,
-    label: "News Articles",
-    value: news.length,
-    color: "text-accent",
-  },
-];
-
 export default function AdminDashboard() {
+  const [albumCount, setAlbumCount] = useState(0);
+  const [matches, setMatches] = useState<Match[] | null>(null);
+  const [news, setNews] = useState<NewsItem[]>([]);
+
+  useEffect(() => {
+    setAlbumCount(getAlbums().length);
+    setMatches(getMatches());
+    setNews(getNews());
+  }, []);
+
+  if (!matches) return null;
+
+  const stats = [
+    {
+      icon: Calendar,
+      label: "Matches",
+      value: matches.length,
+      color: "text-accent",
+    },
+    {
+      icon: Users,
+      label: "Total Participants",
+      value: rsvpData.reduce((sum, r) => sum + r.participants.length, 0),
+      color: "text-accent",
+    },
+    {
+      icon: Image,
+      label: "Albums",
+      value: albumCount,
+      color: "text-accent",
+    },
+    {
+      icon: Newspaper,
+      label: "News Articles",
+      value: news.length,
+      color: "text-accent",
+    },
+  ];
+
   return (
     <div>
       <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-text mb-8">

@@ -1,20 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, Video } from "lucide-react";
+import { Plus, Trash2, X, Video, ExternalLink, Upload } from "lucide-react";
 import Card from "@/components/card";
-import { albums as initialAlbums } from "@/data/mock";
-import { type Album, type GalleryItem } from "@/data/mock";
+import { type Album } from "@/data/mock";
+import { getAlbums, createAlbum, deleteAlbum, updateAlbum, addItem, deleteItem } from "@/lib/album-store";
+import DatePicker from "@/components/date-picker";
 
 export default function AdminGallery() {
-  const [albumList, setAlbumList] = useState(initialAlbums);
+  const [albumList, setAlbumList] = useState<Album[] | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ title: "", matchDate: "", coverUrl: "" });
+  const [form, setForm] = useState({ title: "", matchDate: "", coverUrl: "", gdriveLink: "" });
   const [managingId, setManagingId] = useState<string | null>(null);
   const [itemForm, setItemForm] = useState({ type: "image" as "image" | "video", url: "" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const managingAlbum = managingId ? albumList.find((a) => a.id === managingId) ?? null : null;
+  useEffect(() => {
+    setAlbumList(getAlbums());
+  }, []);
+
+  const managingAlbum = managingId && albumList ? albumList.find((a) => a.id === managingId) ?? null : null;
+
+  const handleCoverFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm({ ...form, coverUrl: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleCreate = () => {
     if (!form.title || !form.matchDate) return;
@@ -23,36 +39,35 @@ export default function AdminGallery() {
       title: form.title,
       matchDate: form.matchDate,
       coverUrl: form.coverUrl,
+      gdriveLink: form.gdriveLink || undefined,
       items: [],
     };
-    setAlbumList([newAlbum, ...albumList]);
+    setAlbumList(createAlbum(newAlbum));
     setShowCreate(false);
-    setForm({ title: "", matchDate: "", coverUrl: "" });
+    setForm({ title: "", matchDate: "", coverUrl: "", gdriveLink: "" });
   };
 
   const handleDelete = (id: string) => {
     if (managingId === id) setManagingId(null);
-    setAlbumList(albumList.filter((a) => a.id !== id));
+    setAlbumList(deleteAlbum(id));
   };
 
-  const updateCoverUrl = (albumId: string, url: string) => {
-    setAlbumList(albumList.map((a) => (a.id === albumId ? { ...a, coverUrl: url } : a)));
+  const handleUpdateField = (albumId: string, field: string, value: string) => {
+    setAlbumList(updateAlbum(albumId, { [field]: value }));
   };
 
-  const addItem = (albumId: string) => {
+  const handleAddItem = (albumId: string) => {
     if (!itemForm.url) return;
-    const newItem: GalleryItem = {
-      id: `g${Date.now()}`,
-      type: itemForm.type,
-      url: itemForm.url,
-    };
-    setAlbumList(albumList.map((a) => (a.id === albumId ? { ...a, items: [...a.items, newItem] } : a)));
+    const newItem = { id: `g${Date.now()}`, type: itemForm.type as "image" | "video", url: itemForm.url };
+    setAlbumList(addItem(albumId, newItem));
     setItemForm({ type: "image", url: "" });
   };
 
-  const deleteItem = (albumId: string, itemId: string) => {
-    setAlbumList(albumList.map((a) => (a.id === albumId ? { ...a, items: a.items.filter((i) => i.id !== itemId) } : a)));
+  const handleDeleteItem = (albumId: string, itemId: string) => {
+    setAlbumList(deleteItem(albumId, itemId));
   };
+
+  if (!albumList) return null;
 
   return (
     <div>
@@ -66,6 +81,11 @@ export default function AdminGallery() {
         </button>
       </div>
 
+      {albumList.length === 0 ? (
+        <div className="text-center py-20">
+          <p className="text-secondary-text">Belum ada album. Buat album pertama!</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {albumList.map((album, i) => (
           <motion.div
@@ -91,11 +111,17 @@ export default function AdminGallery() {
               </div>
               <h3 className="text-base font-semibold text-primary-text">{album.title}</h3>
               <p className="text-xs text-secondary-text mt-1">{album.items.length} items</p>
+              {album.gdriveLink && (
+                <p className="text-xs text-accent mt-1 flex items-center gap-1">
+                  <ExternalLink size={10} /> GDrive attached
+                </p>
+              )}
             </Card>
             </div>
           </motion.div>
         ))}
       </div>
+      )}
 
       <AnimatePresence>
         {showCreate && (
@@ -119,34 +145,104 @@ export default function AdminGallery() {
                   <X size={20} />
                 </button>
               </div>
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Album Title"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="date"
-                  value={form.matchDate}
-                  onChange={(e) => setForm({ ...form, matchDate: e.target.value })}
-                  className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="text"
-                  placeholder="Cover Image URL (optional)"
-                  value={form.coverUrl}
-                  onChange={(e) => setForm({ ...form, coverUrl: e.target.value })}
-                  className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
-                />
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    Album Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Clash Weekly #50"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text placeholder:text-secondary-text/50 focus:outline-none focus:border-accent transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    Match Date
+                  </label>
+                  <DatePicker
+                    value={form.matchDate}
+                    onChange={(v) => setForm({ ...form, matchDate: v })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    Cover Photo
+                  </label>
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="relative border-2 border-dashed border-border hover:border-accent/50 transition-colors cursor-pointer"
+                  >
+                    {form.coverUrl ? (
+                      <div className="relative">
+                        <img src={form.coverUrl} alt="cover" className="w-full h-36 object-cover" />
+                        <div className="absolute inset-0 bg-charcoal/0 hover:bg-charcoal/40 transition-colors flex items-center justify-center">
+                          <span className="text-xs uppercase tracking-wider text-primary-text opacity-0 hover:opacity-100 transition-opacity">
+                            Change Photo
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-28 gap-2">
+                        <Upload size={20} className="text-secondary-text" />
+                        <span className="text-xs text-secondary-text">Click to upload cover photo</span>
+                        <span className="text-[10px] text-secondary-text/50">or paste URL below</span>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCoverFile}
+                      className="hidden"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Or paste image URL..."
+                    value={form.coverUrl}
+                    onChange={(e) => setForm({ ...form, coverUrl: e.target.value })}
+                    className="w-full bg-elevated border border-t-0 border-border px-4 py-2.5 text-xs text-primary-text placeholder:text-secondary-text/50 focus:outline-none focus:border-accent transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    Google Drive <span className="text-secondary-text/60 font-normal normal-case">(opsional)</span>
+                  </label>
+                  <div className="relative">
+                    <ExternalLink size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-text" />
+                    <input
+                      type="url"
+                      placeholder="https://drive.google.com/..."
+                      value={form.gdriveLink}
+                      onChange={(e) => setForm({ ...form, gdriveLink: e.target.value })}
+                      className="w-full bg-elevated border border-border pl-9 pr-4 py-3 text-sm text-primary-text placeholder:text-secondary-text/50 focus:outline-none focus:border-accent transition-colors"
+                    />
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={handleCreate}
-                className="w-full mt-6 py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity"
-              >
-                Create Album
-              </button>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="flex-1 py-3 border border-border text-secondary-text text-sm font-medium uppercase tracking-widest hover:bg-elevated transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreate}
+                  disabled={!form.title || !form.matchDate}
+                  className="flex-1 py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Create Album
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -181,7 +277,7 @@ export default function AdminGallery() {
                   <input
                     type="text"
                     value={managingAlbum.coverUrl}
-                    onChange={(e) => updateCoverUrl(managingAlbum.id, e.target.value)}
+                    onChange={(e) => handleUpdateField(managingAlbum.id, "coverUrl", e.target.value)}
                     placeholder="https://example.com/cover.jpg"
                     className="flex-1 bg-elevated border border-border px-4 py-2.5 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
                   />
@@ -191,6 +287,19 @@ export default function AdminGallery() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  Google Drive Link <span className="text-secondary-text/60 font-normal normal-case">(opsional)</span>
+                </label>
+                <input
+                  type="url"
+                  value={managingAlbum.gdriveLink || ""}
+                  onChange={(e) => handleUpdateField(managingAlbum.id, "gdriveLink", e.target.value)}
+                  placeholder="https://drive.google.com/..."
+                  className="w-full bg-elevated border border-border px-4 py-2.5 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
+                />
               </div>
 
               <div className="mb-6">
@@ -211,7 +320,7 @@ export default function AdminGallery() {
                           <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
                         )}
                         <button
-                          onClick={() => deleteItem(managingAlbum.id, item.id)}
+                          onClick={() => handleDeleteItem(managingAlbum.id, item.id)}
                           className="absolute top-1 right-1 p-1 bg-charcoal/80 text-secondary-text hover:text-accent opacity-0 group-hover/item:opacity-100 transition-opacity"
                         >
                           <Trash2 size={12} />
@@ -243,7 +352,7 @@ export default function AdminGallery() {
                     className="flex-1 bg-elevated border border-border px-4 py-2.5 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
                   />
                   <button
-                    onClick={() => addItem(managingAlbum.id)}
+                    onClick={() => handleAddItem(managingAlbum.id)}
                     disabled={!itemForm.url}
                     className="px-6 py-2.5 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
                   >

@@ -1,15 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Search } from "lucide-react";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
-import { faqs } from "@/data/mock";
+import { getFaqs } from "@/lib/settings-store";
+import { type FaqItem } from "@/data/mock";
 
 export default function FAQPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [faqs, setFaqs] = useState<FaqItem[] | null>(null);
+
+  useEffect(() => {
+    setFaqs(getFaqs());
+  }, []);
+
+  if (!faqs) return null;
 
   const filtered = faqs.filter(
     (faq) =>

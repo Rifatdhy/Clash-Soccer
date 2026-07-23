@@ -1,17 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Edit3, Trash2, X } from "lucide-react";
 import Card from "@/components/card";
-import { news as initialNews, formatDate } from "@/data/mock";
+import { formatDate } from "@/data/mock";
 import { type NewsItem } from "@/data/mock";
+import { getNews, createNews, updateNews as updateNewsStore, deleteNews } from "@/lib/news-store";
 
 export default function AdminNews() {
-  const [newsList, setNewsList] = useState(initialNews);
+  const [newsList, setNewsList] = useState<NewsItem[] | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<NewsItem | null>(null);
   const [form, setForm] = useState({ title: "", slug: "", content: "", excerpt: "" });
+
+  useEffect(() => {
+    setNewsList(getNews());
+  }, []);
 
   const openAdd = () => {
     setEditing(null);
@@ -28,7 +33,7 @@ export default function AdminNews() {
   const handleSave = () => {
     const slug = form.slug || form.title.toLowerCase().replace(/\s+/g, "-");
     if (editing) {
-      setNewsList(newsList.map((n) => (n.id === editing.id ? { ...n, ...form, slug } : n)));
+      setNewsList(updateNewsStore(editing.id, { ...form, slug }));
     } else {
       const newItem: NewsItem = {
         id: `n${Date.now()}`,
@@ -37,14 +42,16 @@ export default function AdminNews() {
         coverImage: "",
         date: new Date().toISOString().split("T")[0],
       };
-      setNewsList([newItem, ...newsList]);
+      setNewsList(createNews(newItem));
     }
     setModalOpen(false);
   };
 
   const handleDelete = (id: string) => {
-    setNewsList(newsList.filter((n) => n.id !== id));
+    setNewsList(deleteNews(id));
   };
+
+  if (!newsList) return null;
 
   return (
     <div>

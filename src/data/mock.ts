@@ -21,6 +21,7 @@ export interface Album {
   title: string;
   matchDate: string;
   coverUrl: string;
+  gdriveLink?: string;
   items: GalleryItem[];
 }
 

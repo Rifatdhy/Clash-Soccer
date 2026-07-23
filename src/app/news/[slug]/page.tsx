@@ -1,15 +1,21 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Share2 } from "lucide-react";
 import Link from "next/link";
 import Section from "@/components/section";
-import { news, formatDate } from "@/data/mock";
+import { getNewsBySlug } from "@/lib/news-store";
+import { formatDate, type NewsItem } from "@/data/mock";
 
 export default function NewsDetailPage() {
   const params = useParams();
-  const article = news.find((n) => n.slug === params.slug);
+  const [article, setArticle] = useState<NewsItem | undefined>();
+
+  useEffect(() => {
+    setArticle(getNewsBySlug(params.slug as string));
+  }, []);
 
   if (!article) {
     return (

@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, MessageCircle, ChevronDown, MapPin, Clock, Users } from "lucide-react";
+import { getAlbums } from "@/lib/album-store";
+import { getUpcomingMatches } from "@/lib/match-store";
+import { getNews } from "@/lib/news-store";
+import { getFaqs, getSettings } from "@/lib/settings-store";
 
 function InstagramIcon({ size }: { size: number }) {
   return (
@@ -19,7 +23,7 @@ import Card from "@/components/card";
 import MatchCard from "@/components/match-card";
 import NewsCard from "@/components/news-card";
 import GalleryCard from "@/components/gallery-card";
-import { matches, news, albums, faqs, settings, getUpcomingMatches, formatDate, formatTime } from "@/data/mock";
+import { formatDate, formatTime, type Match, type NewsItem, type FaqItem, type Setting, type Album } from "@/data/mock";
 
 function useRandomParticles(count: number) {
   const [particles, setParticles] = useState<{ left: string; top: string; duration: number; delay: number }[]>([]);
@@ -39,11 +43,25 @@ function useRandomParticles(count: number) {
 }
 
 export default function Home() {
-  const upcomingMatches = getUpcomingMatches().slice(0, 3);
-  const latestNews = news.slice(0, 3);
-  const latestAlbums = albums.slice(0, 4);
-  const faqPreview = faqs.slice(0, 3);
-  const nextMatch = getUpcomingMatches()[0];
+  const [latestAlbums, setLatestAlbums] = useState<Album[]>([]);
+  const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
+  const [latestNews, setLatestNews] = useState<NewsItem[]>([]);
+  const [faqPreview, setFaqPreview] = useState<FaqItem[]>([]);
+  const [nextMatch, setNextMatch] = useState<Match | undefined>();
+  const [settings, setSettings] = useState<Setting | null>(null);
+
+  useEffect(() => {
+    setLatestAlbums(getAlbums().slice(0, 4));
+    const upcoming = getUpcomingMatches();
+    setUpcomingMatches(upcoming.slice(0, 3));
+    setLatestNews(getNews().slice(0, 3));
+    setFaqPreview(getFaqs().slice(0, 3));
+    setNextMatch(upcoming[0]);
+    setSettings(getSettings());
+  }, []);
+
+  if (!settings) return null;
+
   const particles = useRandomParticles(15);
 
   return (
@@ -64,7 +82,7 @@ export default function Home() {
             ))}
           </div>
         )}
-        <div className="relative z-10 text-center max-w-4xl mx-auto">
+        <div className="relative z-10 text-center max-w-4xl mx-auto pt-16 md:pt-20">
           <motion.div
             initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}

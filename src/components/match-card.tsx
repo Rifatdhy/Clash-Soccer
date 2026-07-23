@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { MapPin, Clock, Users } from "lucide-react";
 import Badge from "./badge";
 import Card from "./card";
 import { type Match, formatDate, formatTime } from "@/data/mock";
+import { getParticipantCountByMatch } from "@/lib/rsvp-store";
 
 interface MatchCardProps {
   match: Match;
@@ -13,6 +15,12 @@ interface MatchCardProps {
 }
 
 export default function MatchCard({ match, index = 0 }: MatchCardProps) {
+  const [available, setAvailable] = useState(match.slotsTotal);
+
+  useEffect(() => {
+    const registered = getParticipantCountByMatch(match.id);
+    setAvailable(Math.max(0, match.slotsTotal - registered));
+  }, [match.id, match.slotsTotal]);
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -52,7 +60,7 @@ export default function MatchCard({ match, index = 0 }: MatchCardProps) {
             <div className="flex items-center gap-3 text-sm text-secondary-text">
               <Users size={16} />
               <span>
-                {match.slotsAvailable}/{match.slotsTotal} slots available
+                {available}/{match.slotsTotal} slots available
               </span>
             </div>
           </div>

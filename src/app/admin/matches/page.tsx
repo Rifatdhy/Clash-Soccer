@@ -1,18 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Edit3, Trash2, X } from "lucide-react";
 import Card from "@/components/card";
 import Badge from "@/components/badge";
-import { matches as initialMatches, formatDate, formatTime } from "@/data/mock";
+import { formatDate, formatTime } from "@/data/mock";
 import { type Match } from "@/data/mock";
+import { getMatches, createMatch, updateMatch as updateMatchStore, deleteMatch } from "@/lib/match-store";
 
 export default function AdminMatches() {
-  const [matchList, setMatchList] = useState(initialMatches);
+  const [matchList, setMatchList] = useState<Match[] | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Match | null>(null);
   const [form, setForm] = useState({ title: "", date: "", time: "", location: "", slotsTotal: 20 });
+
+  useEffect(() => {
+    setMatchList(getMatches());
+  }, []);
 
   const openAdd = () => {
     setEditing(null);
@@ -28,7 +33,7 @@ export default function AdminMatches() {
 
   const handleSave = () => {
     if (editing) {
-      setMatchList(matchList.map((m) => (m.id === editing.id ? { ...m, ...form, slotsAvailable: form.slotsTotal } : m)));
+      setMatchList(updateMatchStore(editing.id, { ...form, slotsAvailable: form.slotsTotal }));
     } else {
       const newMatch: Match = {
         id: `m${Date.now()}`,
@@ -36,14 +41,16 @@ export default function AdminMatches() {
         slotsAvailable: form.slotsTotal,
         status: "upcoming",
       };
-      setMatchList([newMatch, ...matchList]);
+      setMatchList(createMatch(newMatch));
     }
     setModalOpen(false);
   };
 
   const handleDelete = (id: string) => {
-    setMatchList(matchList.filter((m) => m.id !== id));
+    setMatchList(deleteMatch(id));
   };
+
+  if (!matchList) return null;
 
   return (
     <div>

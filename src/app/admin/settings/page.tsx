@@ -1,18 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import Card from "@/components/card";
-import { settings as initialSettings, faqs as initialFaqs } from "@/data/mock";
-import { type FaqItem } from "@/data/mock";
+import { type FaqItem, type Setting } from "@/data/mock";
+import { getSettings, updateSettings, getFaqs, createFaq, updateFaq as updateFaqStore, deleteFaq } from "@/lib/settings-store";
 
 export default function AdminSettings() {
-  const [settings, setSettings] = useState(initialSettings);
-  const [faqList, setFaqList] = useState(initialFaqs);
+  const [settings, setSettings] = useState<Setting | null>(null);
+  const [faqList, setFaqList] = useState<FaqItem[] | null>(null);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    setSettings(getSettings());
+    setFaqList(getFaqs());
+  }, []);
+
   const handleSave = () => {
+    if (!settings) return;
+    updateSettings(settings);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -23,23 +30,24 @@ export default function AdminSettings() {
       question: "",
       answer: "",
     };
-    setFaqList([...faqList, newFaq]);
+    setFaqList(createFaq(newFaq));
   };
 
-  const updateFaq = (id: string, field: "question" | "answer", value: string) => {
-    setFaqList(faqList.map((f) => (f.id === id ? { ...f, [field]: value } : f)));
+  const handleUpdateFaq = (id: string, field: "question" | "answer", value: string) => {
+    setFaqList(updateFaqStore(id, field, value));
   };
 
-  const deleteFaq = (id: string) => {
-    setFaqList(faqList.filter((f) => f.id !== id));
+  const handleDeleteFaq = (id: string) => {
+    setFaqList(deleteFaq(id));
   };
+
+  if (!faqList || !settings) return null;
 
   return (
     <div>
       <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-text mb-8">Settings</h1>
 
       <div className="space-y-8 max-w-2xl">
-        {/* General Info */}
         <Card hover={false}>
           <h2 className="text-lg font-semibold text-primary-text mb-6">General Information</h2>
           <div className="space-y-4">
@@ -66,7 +74,6 @@ export default function AdminSettings() {
           </div>
         </Card>
 
-        {/* Contact */}
         <Card hover={false}>
           <h2 className="text-lg font-semibold text-primary-text mb-6">Contact</h2>
           <div className="space-y-4">
@@ -101,7 +108,6 @@ export default function AdminSettings() {
           </div>
         </Card>
 
-        {/* FAQ Management */}
         <Card hover={false}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-primary-text">FAQ</h2>
@@ -121,19 +127,19 @@ export default function AdminSettings() {
                       type="text"
                       placeholder="Question"
                       value={faq.question}
-                      onChange={(e) => updateFaq(faq.id, "question", e.target.value)}
+                      onChange={(e) => handleUpdateFaq(faq.id, "question", e.target.value)}
                       className="w-full bg-elevated border border-border px-3 py-2 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
                     />
                     <textarea
                       placeholder="Answer"
                       value={faq.answer}
-                      onChange={(e) => updateFaq(faq.id, "answer", e.target.value)}
+                      onChange={(e) => handleUpdateFaq(faq.id, "answer", e.target.value)}
                       rows={2}
                       className="w-full bg-elevated border border-border px-3 py-2 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent resize-none"
                     />
                   </div>
                   <button
-                    onClick={() => deleteFaq(faq.id)}
+                    onClick={() => handleDeleteFaq(faq.id)}
                     className="p-1 text-secondary-text hover:text-accent transition-colors flex-shrink-0"
                   >
                     <Trash2 size={14} />
@@ -144,7 +150,6 @@ export default function AdminSettings() {
           </div>
         </Card>
 
-        {/* Save Button */}
         <button
           onClick={handleSave}
           className="w-full py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity"

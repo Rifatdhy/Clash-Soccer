@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { MessageCircle, MapPin } from "lucide-react";
 
@@ -15,30 +16,38 @@ function InstagramIcon({ size }: { size: number }) {
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import Card from "@/components/card";
-import { settings } from "@/data/mock";
-
-const contactItems = [
-  {
-    icon: MessageCircle,
-    label: "WhatsApp",
-    value: settings.whatsapp,
-    href: `https://wa.me/${settings.whatsapp}`,
-  },
-  {
-    icon: InstagramIcon,
-    label: "Instagram",
-    value: `@${settings.instagram}`,
-    href: `https://instagram.com/${settings.instagram}`,
-  },
-  {
-    icon: MapPin,
-    label: "Location",
-    value: settings.location,
-    href: null,
-  },
-];
+import { getSettings } from "@/lib/settings-store";
+import { type Setting } from "@/data/mock";
 
 export default function ContactPage() {
+  const [settings, setSettings] = useState<Setting | null>(null);
+
+  useEffect(() => {
+    setSettings(getSettings());
+  }, []);
+
+  if (!settings) return null;
+
+  const contactItems = [
+    {
+      icon: MessageCircle,
+      label: "WhatsApp",
+      value: settings.whatsapp,
+      href: `https://wa.me/${settings.whatsapp}`,
+    },
+    {
+      icon: InstagramIcon,
+      label: "Instagram",
+      value: `@${settings.instagram}`,
+      href: `https://instagram.com/${settings.instagram}`,
+    },
+    {
+      icon: MapPin,
+      label: "Location",
+      value: settings.location,
+      href: null,
+    },
+  ];
   return (
     <>
       <PageHeader

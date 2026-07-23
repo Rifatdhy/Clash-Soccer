@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { MapPin, Clock, Users, ArrowLeft, Plus, Trash2 } from "lucide-react";
@@ -9,20 +9,30 @@ import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import Card from "@/components/card";
 import Badge from "@/components/badge";
-import { matches, formatDate, formatTime } from "@/data/mock";
-
-interface Participant {
-  name: string;
-  whatsapp: string;
-  jerseySize: string;
-}
+import { getMatchById } from "@/lib/match-store";
+import { formatDate, formatTime, type Match } from "@/data/mock";
+import { addRsvp, getParticipantCountByMatch, type Participant } from "@/lib/rsvp-store";
 
 export default function MatchDetailPage() {
   const params = useParams();
-  const match = matches.find((m) => m.id === params.id);
+  const [match, setMatch] = useState<Match | undefined>();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [form, setForm] = useState({ name: "", whatsapp: "", jerseySize: "M" });
   const [submitted, setSubmitted] = useState(false);
+  const [registeredCount, setRegisteredCount] = useState(0);
+
+  useEffect(() => {
+    const m = getMatchById(params.id as string);
+    setMatch(m);
+  }, []);
+
+  useEffect(() => {
+    if (match) {
+      setRegisteredCount(getParticipantCountByMatch(match.id));
+    }
+  }, [match, submitted]);
+
+  const remainingSlots = match ? match.slotsTotal - registeredCount : 0;
 
   if (!match) {
     return (
@@ -35,6 +45,7 @@ export default function MatchDetailPage() {
 
   const addParticipant = () => {
     if (!form.name || !form.whatsapp) return;
+    if (participants.length >= remainingSlots) return;
     setParticipants([...participants, { ...form }]);
     setForm({ name: "", whatsapp: "", jerseySize: "M" });
   };
@@ -45,7 +56,9 @@ export default function MatchDetailPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (participants.length === 0) return;
+    if (participants.length === 0 || !match) return;
+    if (participants.length > remainingSlots) return;
+    addRsvp(match.id, participants);
     setSubmitted(true);
   };
 
@@ -84,8 +97,13 @@ export default function MatchDetailPage() {
                 </div>
                 <div className="flex items-center gap-3 text-secondary-text">
                   <Users size={18} />
-                  <span>{match.slotsAvailable}/{match.slotsTotal} slots available</span>
+                  <span>{remainingSlots}/{match.slotsTotal} slots available</span>
                 </div>
+                {registeredCount > 0 && (
+                  <p className="text-xs text-secondary-text mt-1 ml-8">
+                    {registeredCount} already registered
+                  </p>
+                )}
               </div>
             </Card>
           </motion.div>
@@ -97,8 +115,17 @@ export default function MatchDetailPage() {
               transition={{ duration: 0.5, delay: 0.15, ease: [0.32, 0.72, 0, 1] }}
             >
               <Card hover={false}>
-                <h2 className="text-2xl font-bold text-primary-text mb-6">RSVP</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-primary-text">RSVP</h2>
+                  <span className="text-sm text-secondary-text">{remainingSlots} slot left</span>
+                </div>
 
+                {remainingSlots <= 0 && !submitted ? (
+                  <div className="text-center py-8">
+                    <p className="text-secondary-text">Maaf, slot untuk pertandingan ini sudah penuh.</p>
+                  </div>
+                ) : (
+                <>
                 <div className="space-y-4 mb-6">
                   <input
                     type="text"
@@ -127,7 +154,8 @@ export default function MatchDetailPage() {
 
                   <button
                     onClick={addParticipant}
-                    className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border text-sm text-secondary-text hover:border-accent hover:text-accent transition-colors"
+                    disabled={participants.length >= remainingSlots}
+                    className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-border text-sm text-secondary-text hover:border-accent hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <Plus size={16} /> Tambah Peserta
                   </button>
@@ -159,6 +187,8 @@ export default function MatchDetailPage() {
                 >
                   Submit RSVP
                 </button>
+                </>
+                )}
               </Card>
             </motion.div>
           )}

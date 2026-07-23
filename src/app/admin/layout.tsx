@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { redirect, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -12,6 +13,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { isAuthenticated, logout } from "@/lib/auth-store";
 
 const sidebarLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -24,10 +26,27 @@ const sidebarLinks = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
+
+  if (!isAuthenticated() && pathname !== "/admin/login") {
+    redirect("/admin/login");
+  }
+
+  if (pathname === "/admin/login") return <>{children}</>;
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/admin/login";
+  };
 
   return (
     <div className="min-h-screen flex pt-16 md:pt-20">
-      {/* Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-charcoal fixed left-0 top-16 md:top-20 bottom-0">
         <div className="flex-1 py-6 px-3 space-y-1">
           {sidebarLinks.map((link) => (
@@ -47,14 +66,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </div>
         <div className="p-3 border-t border-border">
-          <button className="flex items-center gap-3 px-3 py-2.5 text-sm text-secondary-text hover:text-primary-text transition-colors w-full">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 text-sm text-secondary-text hover:text-primary-text transition-colors w-full"
+          >
             <LogOut size={18} />
             Logout
           </button>
         </div>
       </aside>
 
-      {/* Mobile nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-charcoal border-t border-border">
         <div className="flex justify-around py-2">
           {sidebarLinks.slice(0, 5).map((link) => (
@@ -73,7 +94,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
 
-      {/* Main content */}
       <div className="flex-1 md:ml-64 pb-20 md:pb-0">
         <div className="p-6 md:p-8 max-w-6xl">{children}</div>
       </div>

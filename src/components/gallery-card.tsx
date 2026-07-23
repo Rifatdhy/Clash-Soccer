@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Play } from "lucide-react";
+import { Play, ExternalLink } from "lucide-react";
 import Card from "./card";
 import { type Album, formatDate } from "@/data/mock";
 
@@ -45,6 +45,11 @@ export default function GalleryCard({ album, index = 0 }: GalleryCardProps) {
           <p className="text-sm text-secondary-text mt-1">
             {album.items.length} items
           </p>
+          {album.gdriveLink && (
+            <p className="text-xs text-accent mt-2 flex items-center gap-1">
+              <ExternalLink size={11} /> Google Drive
+            </p>
+          )}
         </Card>
       </Link>
     </motion.div>

@@ -1,15 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import MatchCard from "@/components/match-card";
-import { matches, getUpcomingMatches, getCompletedMatches } from "@/data/mock";
+import { getUpcomingMatches, getCompletedMatches } from "@/lib/match-store";
+import { type Match } from "@/data/mock";
 
 export default function SchedulePage() {
   const [showPast, setShowPast] = useState(false);
-  const upcomingMatches = getUpcomingMatches();
-  const pastMatches = getCompletedMatches();
+  const [upcomingMatches, setUpcomingMatches] = useState<Match[] | null>(null);
+  const [pastMatches, setPastMatches] = useState<Match[]>([]);
+
+  useEffect(() => {
+    setUpcomingMatches(getUpcomingMatches());
+    setPastMatches(getCompletedMatches());
+  }, []);
+
+  if (!upcomingMatches) return null;
 
   return (
     <>

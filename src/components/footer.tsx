@@ -1,5 +1,9 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { settings } from "@/data/mock";
+import { getSettings } from "@/lib/settings-store";
+import { type Setting } from "@/data/mock";
 import { MessageCircle } from "lucide-react";
 
 function InstagramIcon({ size }: { size: number }) {
@@ -13,6 +17,14 @@ function InstagramIcon({ size }: { size: number }) {
 }
 
 export default function Footer() {
+  const [settings, setSettings] = useState<Setting | null>(null);
+
+  useEffect(() => {
+    setSettings(getSettings());
+  }, []);
+
+  if (!settings) return null;
+
   return (
     <footer className="border-t border-border bg-charcoal">
       <div className="mx-auto max-w-7xl px-4 py-16 md:py-20">
