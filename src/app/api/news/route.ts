@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import {
+  badRequest,
+  isNonEmptyString,
+  isValidDateString,
+  notFound,
+  requireAdmin,
+  serverError,
+} from "@/lib/api-helpers";
 
 // Helper to convert DB keys to frontend camelCase
 function mapNews(row: any) {
@@ -35,34 +43,40 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const authError = await requireAdmin(req);
+  if (authError) return authError;
+
   try {
     const body = await req.json();
     const { id, title, slug, content, excerpt, coverImage, date } = body;
 
-    if (!id || !title || !slug || !content) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!isNonEmptyString(id) || !isNonEmptyString(title) || !isNonEmptyString(slug) || !isNonEmptyString(content) || !isValidDateString(date)) {
+      return badRequest("Invalid news data");
     }
 
     await query(
       `INSERT INTO news (id, title, slug, content, excerpt, cover_image, date)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, title, slug, content, excerpt || "", coverImage || "", date]
+      [id.trim(), title.trim(), slug.trim(), content.trim(), isNonEmptyString(excerpt) ? excerpt.trim() : "", isNonEmptyString(coverImage) ? coverImage.trim() : "", date]
     );
 
     const res = await query("SELECT * FROM news ORDER BY date DESC");
     return NextResponse.json(res.rows.map(mapNews));
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return serverError(error, "Failed to create news");
   }
 }
 
 export async function PUT(req: Request) {
+  const authError = await requireAdmin(req);
+  if (authError) return authError;
+
   try {
     const body = await req.json();
     const { id, ...updates } = body;
 
-    if (!id) {
-      return NextResponse.json({ error: "News ID is required" }, { status: 400 });
+    if (!isNonEmptyString(id)) {
+      return badRequest("News ID is required");
     }
 
     const fields = [];
@@ -70,59 +84,68 @@ export async function PUT(req: Request) {
     let idx = 1;
 
     if (updates.title !== undefined) {
+      if (!isNonEmptyString(updates.title)) return badRequest("Invalid title");
       fields.push(`title = $${idx++}`);
-      values.push(updates.title);
+      values.push(updates.title.trim());
     }
     if (updates.slug !== undefined) {
+      if (!isNonEmptyString(updates.slug)) return badRequest("Invalid slug");
       fields.push(`slug = $${idx++}`);
-      values.push(updates.slug);
+      values.push(updates.slug.trim());
     }
     if (updates.content !== undefined) {
+      if (!isNonEmptyString(updates.content)) return badRequest("Invalid content");
       fields.push(`content = $${idx++}`);
-      values.push(updates.content);
+      values.push(updates.content.trim());
     }
     if (updates.excerpt !== undefined) {
       fields.push(`excerpt = $${idx++}`);
-      values.push(updates.excerpt);
+      values.push(isNonEmptyString(updates.excerpt) ? updates.excerpt.trim() : "");
     }
     if (updates.coverImage !== undefined) {
       fields.push(`cover_image = $${idx++}`);
-      values.push(updates.coverImage);
+      values.push(isNonEmptyString(updates.coverImage) ? updates.coverImage.trim() : "");
     }
     if (updates.date !== undefined) {
+      if (!isValidDateString(updates.date)) return badRequest("Invalid date");
       fields.push(`date = $${idx++}`);
       values.push(updates.date);
     }
 
     if (fields.length > 0) {
-      values.push(id);
-      await query(
+      values.push(id.trim());
+      const updated = await query(
         `UPDATE news SET ${fields.join(", ")} WHERE id = $${idx}`,
         values
       );
+      if (updated.rowCount === 0) return notFound("News not found");
     }
 
     const res = await query("SELECT * FROM news ORDER BY date DESC");
     return NextResponse.json(res.rows.map(mapNews));
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return serverError(error, "Failed to update news");
   }
 }
 
 export async function DELETE(req: Request) {
+  const authError = await requireAdmin(req);
+  if (authError) return authError;
+
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
-    if (!id) {
-      return NextResponse.json({ error: "News ID is required" }, { status: 400 });
+    if (!isNonEmptyString(id)) {
+      return badRequest("News ID is required");
     }
 
-    await query("DELETE FROM news WHERE id = $1", [id]);
+    const deleted = await query("DELETE FROM news WHERE id = $1", [id.trim()]);
+    if (deleted.rowCount === 0) return notFound("News not found");
 
     const res = await query("SELECT * FROM news ORDER BY date DESC");
     return NextResponse.json(res.rows.map(mapNews));
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return serverError(error, "Failed to delete news");
   }
 }

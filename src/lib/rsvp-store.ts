@@ -57,3 +57,12 @@ export async function addRsvp(matchId: string, participants: Participant[]): Pro
     throw error;
   }
 }
+
+export async function deleteRsvp(id: string): Promise<void> {
+  try {
+    await apiRequest("DELETE", undefined, `?id=${encodeURIComponent(id)}`);
+  } catch (error) {
+    console.error(`Failed to delete RSVP ${id}:`, error);
+    throw error;
+  }
+}

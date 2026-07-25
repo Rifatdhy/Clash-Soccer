@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ADMIN_AUTH_COOKIE, createAdminSessionToken } from "@/lib/admin-auth";
 
 export async function POST(req: Request) {
   try {
@@ -9,12 +10,22 @@ export async function POST(req: Request) {
     const adminPassword = process.env.ADMIN_PASSWORD || "change_this_password";
 
     if (username === adminUsername && password === adminPassword) {
-      // In production, use JWT or session-based auth
-      return NextResponse.json({ 
-        success: true, 
+      const token = await createAdminSessionToken(username);
+      const response = NextResponse.json({
+        success: true,
         message: "Login successful",
-        user: { username }
+        user: { username },
       });
+
+      response.cookies.set(ADMIN_AUTH_COOKIE, token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24,
+        path: "/",
+      });
+
+      return response;
     }
 
     return NextResponse.json(

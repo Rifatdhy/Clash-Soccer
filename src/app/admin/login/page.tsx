@@ -2,18 +2,25 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useSearchParams } from "next/navigation";
 import { login, isAuthenticated } from "@/lib/auth-store";
 
 export default function AdminLogin() {
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next") || "/admin";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      window.location.href = "/admin";
+    async function redirectIfAuthenticated() {
+      if (await isAuthenticated()) {
+        window.location.href = nextPath;
+      }
     }
-  }, []);
+
+    redirectIfAuthenticated();
+  }, [nextPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +31,7 @@ export default function AdminLogin() {
     }
     const success = await login(username, password);
     if (success) {
-      window.location.href = "/admin";
+      window.location.href = nextPath;
     } else {
       setError("Username atau password salah.");
     }

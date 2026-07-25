@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { redirect, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -30,19 +30,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setReady(true);
-  }, []);
+    let mounted = true;
+
+    async function checkAuth() {
+      if (pathname === "/admin/login") {
+        setReady(true);
+        return;
+      }
+
+      const authenticated = await isAuthenticated();
+
+      if (!mounted) return;
+
+      if (!authenticated) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      setReady(true);
+    }
+
+    checkAuth();
+
+    return () => {
+      mounted = false;
+    };
+  }, [pathname]);
 
   if (!ready) return null;
 
-  if (!isAuthenticated() && pathname !== "/admin/login") {
-    redirect("/admin/login");
-  }
-
   if (pathname === "/admin/login") return <>{children}</>;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     window.location.href = "/admin/login";
   };
 

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import {
+  badRequest,
+  isNonEmptyString,
+  requireAdmin,
+  serverError,
+} from "@/lib/api-helpers";
 
-// Helper to convert DB keys to frontend camelCase
 function mapSettings(row: any) {
   return {
     communityName: row.community_name,
@@ -22,62 +27,64 @@ export async function GET() {
       return NextResponse.json({ error: "Settings not found" }, { status: 404 });
     }
     return NextResponse.json(mapSettings(res.rows[0]));
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return serverError(error, "Failed to fetch settings");
   }
 }
 
 export async function PUT(req: Request) {
+  const authError = await requireAdmin(req);
+  if (authError) return authError;
+
   try {
     const body = await req.json();
-    
-    const fields = [];
-    const values = [];
+
+    const fields: string[] = [];
+    const values: string[] = [];
     let idx = 1;
 
-    if (body.communityName !== undefined) {
-      fields.push(`community_name = $${idx++}`);
-      values.push(body.communityName);
-    }
-    if (body.description !== undefined) {
-      fields.push(`description = $${idx++}`);
-      values.push(body.description);
-    }
-    if (body.logoUrl !== undefined) {
-      fields.push(`logo_url = $${idx++}`);
-      values.push(body.logoUrl);
-    }
-    if (body.bannerUrl !== undefined) {
-      fields.push(`banner_url = $${idx++}`);
-      values.push(body.bannerUrl);
-    }
-    if (body.whatsapp !== undefined) {
-      fields.push(`whatsapp = $${idx++}`);
-      values.push(body.whatsapp);
-    }
-    if (body.instagram !== undefined) {
-      fields.push(`instagram = $${idx++}`);
-      values.push(body.instagram);
-    }
-    if (body.location !== undefined) {
-      fields.push(`location = $${idx++}`);
-      values.push(body.location);
-    }
-    if (body.googleMapsEmbed !== undefined) {
-      fields.push(`google_maps_embed = $${idx++}`);
-      values.push(body.googleMapsEmbed);
-    }
+    const addTextField = (apiKey: string, dbKey: string, required = false) => {
+      if (body[apiKey] === undefined) return null;
+      if (required && !isNonEmptyString(body[apiKey])) return `Invalid ${apiKey}`;
+
+      fields.push(`${dbKey} = $${idx++}`);
+      values.push(isNonEmptyString(body[apiKey]) ? body[apiKey].trim() : "");
+      return null;
+    };
+
+    const validationError =
+      addTextField("communityName", "community_name", true) ||
+      addTextField("description", "description") ||
+      addTextField("logoUrl", "logo_url") ||
+      addTextField("bannerUrl", "banner_url") ||
+      addTextField("whatsapp", "whatsapp") ||
+      addTextField("instagram", "instagram") ||
+      addTextField("location", "location") ||
+      addTextField("googleMapsEmbed", "google_maps_embed");
+
+    if (validationError) return badRequest(validationError);
 
     if (fields.length > 0) {
-      await query(
+      const updated = await query(
         `UPDATE settings SET ${fields.join(", ")} WHERE id = 'default'`,
         values
       );
+
+      if (updated.rowCount === 0) {
+        await query(
+          `INSERT INTO settings (id, community_name, description, logo_url, banner_url, whatsapp, instagram, location, google_maps_embed)
+           VALUES ('default', '', '', '', '', '', '', '', '')`
+        );
+        await query(
+          `UPDATE settings SET ${fields.join(", ")} WHERE id = 'default'`,
+          values
+        );
+      }
     }
 
     const res = await query("SELECT * FROM settings WHERE id = 'default'");
     return NextResponse.json(mapSettings(res.rows[0]));
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return serverError(error, "Failed to update settings");
   }
 }

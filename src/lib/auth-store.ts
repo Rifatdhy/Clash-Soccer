@@ -24,14 +24,36 @@ export async function login(username: string, password: string): Promise<boolean
   }
 }
 
-export function logout() {
-  if (typeof window !== "undefined") {
-    sessionStorage.removeItem(AUTH_KEY);
-    sessionStorage.removeItem("adminUsername");
+export async function logout() {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch (error) {
+    console.error("Logout error:", error);
+  } finally {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(AUTH_KEY);
+      sessionStorage.removeItem("adminUsername");
+    }
   }
 }
 
-export function isAuthenticated(): boolean {
+export async function isAuthenticated(): Promise<boolean> {
   if (typeof window === "undefined") return false;
-  return sessionStorage.getItem(AUTH_KEY) === "true";
+
+  try {
+    const response = await fetch("/api/auth/status", { cache: "no-store" });
+    const data = await response.json();
+
+    if (data.authenticated) {
+      sessionStorage.setItem(AUTH_KEY, "true");
+      return true;
+    }
+
+    sessionStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem("adminUsername");
+    return false;
+  } catch (error) {
+    console.error("Auth status error:", error);
+    return sessionStorage.getItem(AUTH_KEY) === "true";
+  }
 }
