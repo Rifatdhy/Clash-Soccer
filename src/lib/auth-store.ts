@@ -1,21 +1,33 @@
 const AUTH_KEY = "clash-soccer-auth";
 
-const ADMIN_USERNAME = "rifat";
-const ADMIN_PASSWORD = "123";
+export async function login(username: string, password: string): Promise<boolean> {
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
 
-export function login(username: string, password: string): boolean {
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem(AUTH_KEY, "true");
+    const data = await response.json();
+
+    if (data.success) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(AUTH_KEY, "true");
+        sessionStorage.setItem("adminUsername", data.user.username);
+      }
+      return true;
     }
-    return true;
+    return false;
+  } catch (error) {
+    console.error("Login error:", error);
+    return false;
   }
-  return false;
 }
 
 export function logout() {
   if (typeof window !== "undefined") {
     sessionStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem("adminUsername");
   }
 }
 

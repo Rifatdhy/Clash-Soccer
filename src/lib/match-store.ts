@@ -1,92 +1,90 @@
 import { type Match } from "@/data/mock";
 
-const STORAGE_KEY = "clash-soccer-matches";
+// Helper to make API requests
+async function apiRequest(method: string, body?: any, queryParams?: string) {
+  const url = `/api/matches${queryParams || ""}`;
+  const response = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.statusText}`);
+  }
+  return response.json();
+}
 
-const initialMatches: Match[] = [
-  {
-    id: "m1", title: "Clash Weekly #47", date: "2026-07-04", time: "19:00",
-    location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 20, status: "upcoming",
-  },
-  {
-    id: "m2", title: "Clash Weekly #48", date: "2026-07-11", time: "19:00",
-    location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 20, status: "upcoming",
-  },
-  {
-    id: "m3", title: "Clash Weekly #49", date: "2026-07-18", time: "20:00",
-    location: "Lapangan DEF Field", slotsTotal: 18, slotsAvailable: 18, status: "upcoming",
-  },
-  {
-    id: "m4", title: "Clash Cup 2026", date: "2026-07-25", time: "14:00",
-    location: "Stadion GHI", slotsTotal: 30, slotsAvailable: 30, status: "upcoming",
-  },
-  {
-    id: "m5", title: "Clash Weekly #50", date: "2026-08-01", time: "19:00",
-    location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 20, status: "upcoming",
-  },
-  {
-    id: "m6", title: "Clash Weekly #45", date: "2026-06-20", time: "19:00",
-    location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 0, status: "completed",
-  },
-  {
-    id: "m7", title: "Clash Weekly #44", date: "2026-06-13", time: "19:00",
-    location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 0, status: "completed",
-  },
-  {
-    id: "m8", title: "Clash Weekly #43", date: "2026-06-06", time: "20:00",
-    location: "Lapangan DEF Field", slotsTotal: 18, slotsAvailable: 0, status: "completed",
-  },
-];
-
-function load(): Match[] {
-  if (typeof window === "undefined") return initialMatches;
+export async function getMatches(): Promise<Match[]> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMatches));
-      return initialMatches;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return initialMatches;
+    return await apiRequest("GET");
+  } catch (error) {
+    console.error("Failed to get matches, using fallback:", error);
+    // Return mock matches as fallback
+    return [
+      { id: "m1", title: "Clash Weekly #47", date: "2026-07-27", time: "19:00", location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 20, status: "upcoming" },
+      { id: "m2", title: "Clash Weekly #48", date: "2026-08-03", time: "19:00", location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 15, status: "upcoming" },
+      { id: "m3", title: "Clash Weekly #46", date: "2026-07-20", time: "19:00", location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 0, status: "completed" },
+    ];
   }
 }
 
-function save(data: Match[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+export async function getMatchById(id: string): Promise<Match | undefined> {
+  try {
+    const response = await fetch(`/api/matches?id=${id}`);
+    if (!response.ok) return undefined;
+    const match = await response.json();
+    return match;
+  } catch (error) {
+    console.error(`Failed to get match by id ${id}:`, error);
+    return undefined;
+  }
 }
 
-export function getMatches(): Match[] {
-  return load();
+export async function getUpcomingMatches(): Promise<Match[]> {
+  try {
+    const matches = await getMatches();
+    return matches.filter((m) => m.status === "upcoming");
+  } catch (error) {
+    console.error("Failed to get upcoming matches:", error);
+    return [];
+  }
 }
 
-export function getMatchById(id: string): Match | undefined {
-  return load().find((m) => m.id === id);
+export async function getCompletedMatches(): Promise<Match[]> {
+  try {
+    const matches = await getMatches();
+    return matches.filter((m) => m.status === "completed");
+  } catch (error) {
+    console.error("Failed to get completed matches:", error);
+    return [];
+  }
 }
 
-export function getUpcomingMatches(): Match[] {
-  return load().filter((m) => m.status === "upcoming");
+export async function createMatch(match: Match): Promise<Match[]> {
+  try {
+    return await apiRequest("POST", match);
+  } catch (error) {
+    console.error("Failed to create match:", error);
+    return getMatches();
+  }
 }
 
-export function getCompletedMatches(): Match[] {
-  return load().filter((m) => m.status === "completed");
+export async function updateMatch(id: string, updates: Partial<Match>): Promise<Match[]> {
+  try {
+    return await apiRequest("PUT", { id, ...updates });
+  } catch (error) {
+    console.error(`Failed to update match ${id}:`, error);
+    return getMatches();
+  }
 }
 
-export function createMatch(match: Match): Match[] {
-  const data = load();
-  data.unshift(match);
-  save(data);
-  return data;
-}
-
-export function updateMatch(id: string, updates: Partial<Match>): Match[] {
-  const data = load().map((m) => (m.id === id ? { ...m, ...updates } : m));
-  save(data);
-  return data;
-}
-
-export function deleteMatch(id: string): Match[] {
-  const data = load().filter((m) => m.id !== id);
-  save(data);
-  return data;
+export async function deleteMatch(id: string): Promise<Match[]> {
+  try {
+    return await apiRequest("DELETE", undefined, `?id=${id}`);
+  } catch (error) {
+    console.error(`Failed to delete match ${id}:`, error);
+    return getMatches();
+  }
 }

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Oswald } from "next/font/google";
-import Navbar from "@/components/navbar";
-import Footer from "@/components/footer";
+import LayoutContent from "@/components/layout-content";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,9 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable}`}>
       <body className="bg-charcoal text-primary-text font-sans antialiased min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <LayoutContent>{children}</LayoutContent>
       </body>
     </html>
   );

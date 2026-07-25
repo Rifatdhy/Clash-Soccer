@@ -49,20 +49,44 @@ export default function Home() {
   const [faqPreview, setFaqPreview] = useState<FaqItem[]>([]);
   const [nextMatch, setNextMatch] = useState<Match | undefined>();
   const [settings, setSettings] = useState<Setting | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Call hooks unconditionally at the top level
+  const particles = useRandomParticles(15);
 
   useEffect(() => {
-    setLatestAlbums(getAlbums().slice(0, 4));
-    const upcoming = getUpcomingMatches();
-    setUpcomingMatches(upcoming.slice(0, 3));
-    setLatestNews(getNews().slice(0, 3));
-    setFaqPreview(getFaqs().slice(0, 3));
-    setNextMatch(upcoming[0]);
-    setSettings(getSettings());
+    async function fetchData() {
+      try {
+        const [albums, upcoming, news, faqs, settingsData] = await Promise.all([
+          getAlbums(),
+          getUpcomingMatches(),
+          getNews(),
+          getFaqs(),
+          getSettings(),
+        ]);
+
+        setLatestAlbums(albums.slice(0, 4));
+        setUpcomingMatches(upcoming.slice(0, 3));
+        setNextMatch(upcoming[0]);
+        setLatestNews(news.slice(0, 3));
+        setFaqPreview(faqs.slice(0, 3));
+        setSettings(settingsData);
+      } catch (error) {
+        console.error("Error loading homepage data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
   }, []);
 
-  if (!settings) return null;
-
-  const particles = useRandomParticles(15);
+  if (isLoading || !settings) {
+    return (
+      <div className="min-h-screen bg-charcoal flex items-center justify-center">
+        <div className="text-secondary-text text-sm uppercase tracking-widest">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <>

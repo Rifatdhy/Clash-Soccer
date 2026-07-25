@@ -1,15 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Download } from "lucide-react";
 import Card from "@/components/card";
-import { matches } from "@/data/mock";
 import { getAllRsvp } from "@/lib/rsvp-store";
+import { getMatches } from "@/lib/match-store";
+import type { RsvpEntry, Match } from "@/types";
 
 export default function AdminRSVP() {
   const [filterMatch, setFilterMatch] = useState("all");
-  const allRsvp = getAllRsvp();
+  const [allRsvp, setAllRsvp] = useState<RsvpEntry[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getAllRsvp(), getMatches()])
+      .then(([rsvps, matchList]) => {
+        setAllRsvp(rsvps);
+        setMatches(matchList);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = filterMatch === "all"
     ? allRsvp
@@ -32,7 +44,7 @@ export default function AdminRSVP() {
                   p.name,
                   p.whatsapp,
                   p.jerseySize,
-                  new Date(r.registeredAt).toLocaleString("id-ID"),
+                  new Date(r.createdAt).toLocaleString("id-ID"),
                 ])
               ),
             ]
@@ -52,20 +64,26 @@ export default function AdminRSVP() {
         </button>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-4">
-        <select
-          value={filterMatch}
-          onChange={(e) => setFilterMatch(e.target.value)}
-          className="bg-elevated border border-border px-4 py-2.5 text-sm text-primary-text focus:outline-none focus:border-accent"
-        >
-          <option value="all">All Matches</option>
-          {matches.map((m) => (
-            <option key={m.id} value={m.id}>{m.title}</option>
-          ))}
-        </select>
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-secondary-text">Loading...</p>
+        </div>
+      ) : (
+        <>
+          <div className="mb-6 flex flex-wrap items-center gap-4">
+            <select
+              value={filterMatch}
+              onChange={(e) => setFilterMatch(e.target.value)}
+              className="bg-elevated border border-border px-4 py-2.5 text-sm text-primary-text focus:outline-none focus:border-accent"
+            >
+              <option value="all">All Matches</option>
+              {matches.map((m) => (
+                <option key={m.id} value={m.id}>{m.title}</option>
+              ))}
+            </select>
+          </div>
 
-      {filtered.length === 0 ? (
+          {filtered.length === 0 ? (
         <Card hover={false}>
           <div className="text-center py-12">
             <p className="text-secondary-text">Belum ada RSVP untuk pertandingan ini.</p>
@@ -99,7 +117,7 @@ export default function AdminRSVP() {
                       <td className="py-3 px-4 text-secondary-text">{p.whatsapp}</td>
                       <td className="py-3 px-4 text-secondary-text">{p.jerseySize}</td>
                       <td className="py-3 px-4 text-secondary-text">
-                        {new Date(rsvp.registeredAt).toLocaleDateString("id-ID", {
+                        {new Date(rsvp.createdAt).toLocaleDateString("id-ID", {
                           day: "numeric",
                           month: "short",
                           hour: "2-digit",
@@ -115,7 +133,9 @@ export default function AdminRSVP() {
           <div className="border-t border-border px-4 py-3 text-xs text-secondary-text">
             Total: {allRsvp.reduce((sum, r) => sum + r.participants.length, 0)} participants across {allRsvp.length} registrations
           </div>
-        </Card>
+          </Card>
+          )}
+        </>
       )}
     </div>
   );

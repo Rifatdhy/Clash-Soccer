@@ -11,7 +11,8 @@ import Card from "@/components/card";
 import Badge from "@/components/badge";
 import { getMatchById } from "@/lib/match-store";
 import { formatDate, formatTime, type Match } from "@/data/mock";
-import { addRsvp, getParticipantCountByMatch, type Participant } from "@/lib/rsvp-store";
+import { addRsvp, getParticipantCountByMatch } from "@/lib/rsvp-store";
+import type { Participant } from "@/types";
 
 export default function MatchDetailPage() {
   const params = useParams();
@@ -22,13 +23,12 @@ export default function MatchDetailPage() {
   const [registeredCount, setRegisteredCount] = useState(0);
 
   useEffect(() => {
-    const m = getMatchById(params.id as string);
-    setMatch(m);
-  }, []);
+    getMatchById(params.id as string).then(setMatch);
+  }, [params.id]);
 
   useEffect(() => {
     if (match) {
-      setRegisteredCount(getParticipantCountByMatch(match.id));
+      getParticipantCountByMatch(match.id).then(setRegisteredCount);
     }
   }, [match, submitted]);
 

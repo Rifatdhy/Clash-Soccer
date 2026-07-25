@@ -13,8 +13,13 @@ export default function SchedulePage() {
   const [pastMatches, setPastMatches] = useState<Match[]>([]);
 
   useEffect(() => {
-    setUpcomingMatches(getUpcomingMatches());
-    setPastMatches(getCompletedMatches());
+    async function fetchMatches() {
+      const upcoming = await getUpcomingMatches();
+      const past = await getCompletedMatches();
+      setUpcomingMatches(upcoming);
+      setPastMatches(past);
+    }
+    fetchMatches();
   }, []);
 
   if (!upcomingMatches) return null;

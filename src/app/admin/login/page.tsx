@@ -15,14 +15,15 @@ export default function AdminLogin() {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (!username || !password) {
       setError("Isi username dan password.");
       return;
     }
-    if (login(username, password)) {
+    const success = await login(username, password);
+    if (success) {
       window.location.href = "/admin";
     } else {
       setError("Username atau password salah.");

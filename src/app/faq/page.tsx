@@ -14,7 +14,7 @@ export default function FAQPage() {
   const [faqs, setFaqs] = useState<FaqItem[] | null>(null);
 
   useEffect(() => {
-    setFaqs(getFaqs());
+    getFaqs().then(setFaqs);
   }, []);
 
   if (!faqs) return null;

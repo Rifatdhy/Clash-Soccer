@@ -1,56 +1,59 @@
-export interface Participant {
-  name: string;
-  whatsapp: string;
-  jerseySize: string;
+import type { Participant, RsvpEntry } from "@/types";
+
+// Helper to make API requests
+async function apiRequest(method: string, body?: any, queryParams?: string) {
+  const url = `/api/rsvps${queryParams || ""}`;
+  const response = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.statusText}`);
+  }
+  return response.json();
 }
 
-export interface RsvpEntry {
-  id: string;
-  matchId: string;
-  participants: Participant[];
-  registeredAt: string;
-}
-
-const STORAGE_KEY = "clash-soccer-rsvp";
-
-function load(): RsvpEntry[] {
-  if (typeof window === "undefined") return [];
+export async function getRsvpByMatch(matchId: string): Promise<RsvpEntry[]> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
+    return await apiRequest("GET", undefined, `?matchId=${matchId}`);
+  } catch (error) {
+    console.error(`Failed to get RSVPs for match ${matchId}:`, error);
     return [];
   }
 }
 
-function save(data: RsvpEntry[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+export async function getAllRsvp(): Promise<RsvpEntry[]> {
+  try {
+    return await apiRequest("GET");
+  } catch (error) {
+    console.error("Failed to get all RSVPs:", error);
+    return [];
+  }
 }
 
-export function getRsvpByMatch(matchId: string): RsvpEntry[] {
-  return load().filter((r) => r.matchId === matchId);
+// Alias for getAllRsvp
+export async function getRsvps(): Promise<RsvpEntry[]> {
+  return getAllRsvp();
 }
 
-export function getAllRsvp(): RsvpEntry[] {
-  return load();
+export async function getParticipantCountByMatch(matchId: string): Promise<number> {
+  try {
+    const rsvps = await getRsvpByMatch(matchId);
+    return rsvps.reduce((sum, r) => sum + r.participants.length, 0);
+  } catch (error) {
+    console.error(`Failed to get participant count for match ${matchId}:`, error);
+    return 0;
+  }
 }
 
-export function getParticipantCountByMatch(matchId: string): number {
-  return load()
-    .filter((r) => r.matchId === matchId)
-    .reduce((sum, r) => sum + r.participants.length, 0);
-}
-
-export function addRsvp(matchId: string, participants: Participant[]): RsvpEntry {
-  const data = load();
-  const entry: RsvpEntry = {
-    id: `rsvp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    matchId,
-    participants,
-    registeredAt: new Date().toISOString(),
-  };
-  data.push(entry);
-  save(data);
-  return entry;
+export async function addRsvp(matchId: string, participants: Participant[]): Promise<RsvpEntry> {
+  try {
+    return await apiRequest("POST", { matchId, participants });
+  } catch (error: any) {
+    console.error("Failed to add RSVP:", error);
+    throw error;
+  }
 }

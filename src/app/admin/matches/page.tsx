@@ -5,23 +5,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Edit3, Trash2, X } from "lucide-react";
 import Card from "@/components/card";
 import Badge from "@/components/badge";
-import { formatDate, formatTime } from "@/data/mock";
-import { type Match } from "@/data/mock";
-import { getMatches, createMatch, updateMatch as updateMatchStore, deleteMatch } from "@/lib/match-store";
+import { formatDate, formatTime } from "@/lib/format";
+import type { Match } from "@/types";
+import { getMatches, createMatch, updateMatch, deleteMatch } from "@/lib/match-store";
 
 export default function AdminMatches() {
-  const [matchList, setMatchList] = useState<Match[] | null>(null);
+  const [matchList, setMatchList] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Match | null>(null);
   const [form, setForm] = useState({ title: "", date: "", time: "", location: "", slotsTotal: 20 });
 
   useEffect(() => {
-    setMatchList(getMatches());
+    loadMatches();
   }, []);
+
+  async function loadMatches() {
+    try {
+      const matches = await getMatches();
+      setMatchList(matches);
+    } catch (error) {
+      console.error("Error loading matches:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ title: "", date: "", time: "", location: "", slotsTotal: 20 });
+    setForm({ title: "", date: "", time: "19:00", location: "", slotsTotal: 20 });
     setModalOpen(true);
   };
 
@@ -31,26 +43,45 @@ export default function AdminMatches() {
     setModalOpen(true);
   };
 
-  const handleSave = () => {
-    if (editing) {
-      setMatchList(updateMatchStore(editing.id, { ...form, slotsAvailable: form.slotsTotal }));
-    } else {
-      const newMatch: Match = {
-        id: `m${Date.now()}`,
-        ...form,
-        slotsAvailable: form.slotsTotal,
-        status: "upcoming",
-      };
-      setMatchList(createMatch(newMatch));
+  async function handleSave() {
+    try {
+      if (editing) {
+        await updateMatch(editing.id, { ...form, slotsAvailable: form.slotsTotal });
+      } else {
+        const newMatch = {
+          id: `m${Date.now()}`,
+          ...form,
+          slotsAvailable: form.slotsTotal,
+          status: "upcoming" as const,
+        };
+        await createMatch(newMatch);
+      }
+      await loadMatches();
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Error saving match:", error);
+      alert("Gagal menyimpan match. Silakan coba lagi.");
     }
-    setModalOpen(false);
-  };
+  }
 
-  const handleDelete = (id: string) => {
-    setMatchList(deleteMatch(id));
-  };
+  async function handleDelete(id: string) {
+    if (!confirm("Yakin ingin menghapus match ini?")) return;
+    try {
+      await deleteMatch(id);
+      await loadMatches();
+    } catch (error) {
+      console.error("Error deleting match:", error);
+      alert("Gagal menghapus match. Silakan coba lagi.");
+    }
+  }
 
-  if (!matchList) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-secondary-text">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -139,47 +170,116 @@ export default function AdminMatches() {
               </div>
 
               <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Title"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="date"
-                  value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="time"
-                  value={form.time}
-                  onChange={(e) => setForm({ ...form, time: e.target.value })}
-                  className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="text"
-                  placeholder="Location"
-                  value={form.location}
-                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="number"
-                  placeholder="Total Slots"
-                  value={form.slotsTotal}
-                  onChange={(e) => setForm({ ...form, slotsTotal: parseInt(e.target.value) || 0 })}
-                  className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text focus:outline-none focus:border-accent"
-                />
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    Match Title <span className="text-accent">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Clash Weekly #50"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text placeholder:text-secondary-text/50 focus:outline-none focus:border-accent transition-colors"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                      Date <span className="text-accent">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={form.date}
+                      onChange={(e) => setForm({ ...form, date: e.target.value })}
+                      className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text focus:outline-none focus:border-accent transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                      Time <span className="text-accent">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={form.time.split(':')[0] || '19'}
+                        onChange={(e) => {
+                          const mins = form.time.split(':')[1] || '00';
+                          setForm({ ...form, time: `${e.target.value}:${mins}` });
+                        }}
+                        className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text focus:outline-none focus:border-accent transition-colors"
+                      >
+                        {Array.from({ length: 24 }, (_, i) => {
+                          const hour = i.toString().padStart(2, '0');
+                          return <option key={hour} value={hour}>{hour}</option>;
+                        })}
+                      </select>
+                      <select
+                        value={form.time.split(':')[1] || '00'}
+                        onChange={(e) => {
+                          const hours = form.time.split(':')[0] || '19';
+                          setForm({ ...form, time: `${hours}:${e.target.value}` });
+                        }}
+                        className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text focus:outline-none focus:border-accent transition-colors"
+                      >
+                        {['00', '15', '30', '45'].map(min => (
+                          <option key={min} value={min}>{min}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <p className="text-xs text-secondary-text/60 mt-1.5">
+                      Format 24 jam: Jam (00-23) : Menit
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    Location <span className="text-accent">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Lapangan A, Futsal XYZ"
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text placeholder:text-secondary-text/50 focus:outline-none focus:border-accent transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    Total Slots <span className="text-accent">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="20"
+                    value={form.slotsTotal}
+                    onChange={(e) => setForm({ ...form, slotsTotal: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text placeholder:text-secondary-text/50 focus:outline-none focus:border-accent transition-colors"
+                  />
+                  <p className="text-xs text-secondary-text/60 mt-1.5">
+                    Jumlah pemain yang bisa mendaftar untuk match ini
+                  </p>
+                </div>
               </div>
 
-              <button
-                onClick={handleSave}
-                className="w-full mt-6 py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity"
-              >
-                {editing ? "Update" : "Create"}
-              </button>
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="flex-1 py-3 border border-border text-secondary-text text-sm font-medium uppercase tracking-widest hover:bg-elevated transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!form.title || !form.date || !form.time || !form.location || form.slotsTotal < 1}
+                  className="flex-1 py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {editing ? "Update Match" : "Create Match"}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

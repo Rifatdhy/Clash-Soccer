@@ -3,24 +3,60 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Card from "@/components/card";
-import { rsvpData, type Match, type NewsItem } from "@/data/mock";
 import { getMatches } from "@/lib/match-store";
 import { getNews } from "@/lib/news-store";
 import { getAlbums } from "@/lib/album-store";
+import { getRsvps } from "@/lib/rsvp-store";
 import { Calendar, Users, Image, Newspaper } from "lucide-react";
+import type { Match, NewsItem, Album, RsvpEntry } from "@/types";
 
 export default function AdminDashboard() {
   const [albumCount, setAlbumCount] = useState(0);
-  const [matches, setMatches] = useState<Match[] | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [rsvps, setRsvps] = useState<RsvpEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setAlbumCount(getAlbums().length);
-    setMatches(getMatches());
-    setNews(getNews());
+    async function fetchData() {
+      try {
+        const [matchesData, newsData, albumsData, rsvpsData] = await Promise.all([
+          getMatches(),
+          getNews(),
+          getAlbums(),
+          getRsvps(),
+        ]);
+        setMatches(matchesData);
+        setNews(newsData);
+        setAlbumCount(albumsData.length);
+        setRsvps(rsvpsData);
+      } catch (error) {
+        console.error("Error fetching admin data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
   }, []);
 
-  if (!matches) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-secondary-text">Loading...</p>
+      </div>
+    );
+  }
+
+  const totalParticipants = rsvps.reduce((sum, r) => {
+    try {
+      const participants = typeof r.participants === 'string' 
+        ? JSON.parse(r.participants) 
+        : r.participants;
+      return sum + (Array.isArray(participants) ? participants.length : 0);
+    } catch {
+      return sum;
+    }
+  }, 0);
 
   const stats = [
     {
@@ -32,7 +68,7 @@ export default function AdminDashboard() {
     {
       icon: Users,
       label: "Total Participants",
-      value: rsvpData.reduce((sum, r) => sum + r.participants.length, 0),
+      value: totalParticipants,
       color: "text-accent",
     },
     {

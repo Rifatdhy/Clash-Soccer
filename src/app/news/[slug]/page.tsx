@@ -14,8 +14,8 @@ export default function NewsDetailPage() {
   const [article, setArticle] = useState<NewsItem | undefined>();
 
   useEffect(() => {
-    setArticle(getNewsBySlug(params.slug as string));
-  }, []);
+    getNewsBySlug(params.slug as string).then(setArticle);
+  }, [params.slug]);
 
   if (!article) {
     return (
@@ -59,9 +59,22 @@ export default function NewsDetailPage() {
 
       <Section>
         <div className="mx-auto max-w-3xl">
-          <div className="aspect-[16/9] bg-elevated border border-border mb-12">
-            <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="aspect-[16/9] bg-elevated border border-border mb-12 overflow-hidden"
+          >
+            {article.coverImage ? (
+              <img 
+                src={article.coverImage} 
+                alt={article.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+            )}
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}

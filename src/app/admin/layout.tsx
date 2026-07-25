@@ -14,6 +14,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { isAuthenticated, logout } from "@/lib/auth-store";
+import AdminNavbar from "@/components/admin-navbar";
 
 const sidebarLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -46,8 +47,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="min-h-screen flex pt-16 md:pt-20">
-      <aside className="hidden md:flex w-64 flex-col border-r border-border bg-charcoal fixed left-0 top-16 md:top-20 bottom-0">
+    <>
+      <AdminNavbar />
+      <div className="min-h-screen flex pt-16 md:pt-20">
+        <aside className="hidden md:flex w-64 flex-col border-r border-border bg-charcoal fixed left-0 top-16 md:top-20 bottom-0">
         <div className="flex-1 py-6 px-3 space-y-1">
           {sidebarLinks.map((link) => (
             <Link
@@ -94,9 +97,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
 
-      <div className="flex-1 md:ml-64 pb-20 md:pb-0">
-        <div className="p-6 md:p-8 max-w-6xl">{children}</div>
+        <div className="flex-1 md:ml-64 pb-20 md:pb-0">
+          <div className="p-6 md:p-8 max-w-6xl">{children}</div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

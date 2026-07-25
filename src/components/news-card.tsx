@@ -21,7 +21,15 @@ export default function NewsCard({ item, index = 0 }: NewsCardProps) {
       <Link href={`/news/${item.slug}`}>
         <Card className="h-full group">
           <div className="aspect-[16/9] bg-elevated mb-6 overflow-hidden">
-            <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+            {item.coverImage ? (
+              <img 
+                src={item.coverImage} 
+                alt={item.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+            )}
           </div>
           <p className="text-xs text-secondary-text uppercase tracking-widest mb-2">
             {formatDate(item.date)}

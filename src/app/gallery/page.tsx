@@ -11,7 +11,7 @@ export default function GalleryPage() {
   const [albums, setAlbums] = useState<Album[] | null>(null);
 
   useEffect(() => {
-    setAlbums(getAlbums());
+    getAlbums().then(setAlbums);
   }, []);
 
   if (!albums) return null;

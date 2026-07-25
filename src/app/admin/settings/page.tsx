@@ -13,8 +13,8 @@ export default function AdminSettings() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setSettings(getSettings());
-    setFaqList(getFaqs());
+    getSettings().then(setSettings);
+    getFaqs().then(setFaqList);
   }, []);
 
   const handleSave = () => {
@@ -24,21 +24,21 @@ export default function AdminSettings() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const addFaq = () => {
+  const addFaq = async () => {
     const newFaq: FaqItem = {
       id: `f${Date.now()}`,
       question: "",
       answer: "",
     };
-    setFaqList(createFaq(newFaq));
+    setFaqList(await createFaq(newFaq));
   };
 
-  const handleUpdateFaq = (id: string, field: "question" | "answer", value: string) => {
-    setFaqList(updateFaqStore(id, field, value));
+  const handleUpdateFaq = async (id: string, field: "question" | "answer", value: string) => {
+    setFaqList(await updateFaqStore(id, field, value));
   };
 
-  const handleDeleteFaq = (id: string) => {
-    setFaqList(deleteFaq(id));
+  const handleDeleteFaq = async (id: string) => {
+    setFaqList(await deleteFaq(id));
   };
 
   if (!faqList || !settings) return null;

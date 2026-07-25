@@ -18,8 +18,11 @@ export default function MatchCard({ match, index = 0 }: MatchCardProps) {
   const [available, setAvailable] = useState(match.slotsTotal);
 
   useEffect(() => {
-    const registered = getParticipantCountByMatch(match.id);
-    setAvailable(Math.max(0, match.slotsTotal - registered));
+    async function fetchRegistered() {
+      const registered = await getParticipantCountByMatch(match.id);
+      setAvailable(Math.max(0, match.slotsTotal - registered));
+    }
+    fetchRegistered();
   }, [match.id, match.slotsTotal]);
   return (
     <motion.div

@@ -17,8 +17,7 @@ export default function AlbumDetailPage() {
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   useEffect(() => {
-    const a = getAlbumById(params.id as string);
-    setAlbum(a ?? null);
+    getAlbumById(params.id as string).then((a) => setAlbum(a ?? null));
   }, [params.id]);
 
   if (!album) {
@@ -76,17 +75,27 @@ export default function AlbumDetailPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
-            className="mt-10 text-center"
+            className="mt-12 p-6 border border-accent/30 bg-accent/5"
           >
-            <a
-              href={album.gdriveLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 border border-border text-primary-text text-sm uppercase tracking-widest hover:bg-elevated transition-colors"
-            >
-              <ExternalLink size={16} />
-              Lihat Foto Lengkap di Google Drive
-            </a>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-center sm:text-left">
+                <h3 className="text-base font-semibold text-primary-text mb-1">
+                  Foto Lengkap Tersedia
+                </h3>
+                <p className="text-sm text-secondary-text">
+                  Lihat dan download semua foto dalam kualitas penuh
+                </p>
+              </div>
+              <a
+                href={album.gdriveLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity whitespace-nowrap"
+              >
+                <ExternalLink size={16} />
+                Buka Google Drive
+              </a>
+            </div>
           </motion.div>
         )}
       </Section>

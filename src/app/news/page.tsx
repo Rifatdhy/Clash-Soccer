@@ -13,7 +13,7 @@ export default function NewsPage() {
   const perPage = 6;
 
   useEffect(() => {
-    setNews(getNews());
+    getNews().then(setNews);
   }, []);
 
   if (!news) return null;

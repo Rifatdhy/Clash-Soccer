@@ -23,7 +23,7 @@ export default function ContactPage() {
   const [settings, setSettings] = useState<Setting | null>(null);
 
   useEffect(() => {
-    setSettings(getSettings());
+    getSettings().then(setSettings);
   }, []);
 
   if (!settings) return null;

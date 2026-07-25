@@ -9,7 +9,8 @@ import { getAlbums, createAlbum, deleteAlbum, updateAlbum, addItem, deleteItem }
 import DatePicker from "@/components/date-picker";
 
 export default function AdminGallery() {
-  const [albumList, setAlbumList] = useState<Album[] | null>(null);
+  const [albumList, setAlbumList] = useState<Album[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: "", matchDate: "", coverUrl: "", gdriveLink: "" });
   const [managingId, setManagingId] = useState<string | null>(null);
@@ -17,10 +18,13 @@ export default function AdminGallery() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setAlbumList(getAlbums());
+    getAlbums().then((albums) => {
+      setAlbumList(albums);
+      setLoading(false);
+    });
   }, []);
 
-  const managingAlbum = managingId && albumList ? albumList.find((a) => a.id === managingId) ?? null : null;
+  const managingAlbum = managingId ? albumList.find((a) => a.id === managingId) ?? null : null;
 
   const handleCoverFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -32,7 +36,7 @@ export default function AdminGallery() {
     reader.readAsDataURL(file);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!form.title || !form.matchDate) return;
     const newAlbum: Album = {
       id: `a${Date.now()}`,
@@ -42,32 +46,38 @@ export default function AdminGallery() {
       gdriveLink: form.gdriveLink || undefined,
       items: [],
     };
-    setAlbumList(createAlbum(newAlbum));
+    setAlbumList(await createAlbum(newAlbum));
     setShowCreate(false);
     setForm({ title: "", matchDate: "", coverUrl: "", gdriveLink: "" });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (managingId === id) setManagingId(null);
-    setAlbumList(deleteAlbum(id));
+    setAlbumList(await deleteAlbum(id));
   };
 
-  const handleUpdateField = (albumId: string, field: string, value: string) => {
-    setAlbumList(updateAlbum(albumId, { [field]: value }));
+  const handleUpdateField = async (albumId: string, field: string, value: string) => {
+    setAlbumList(await updateAlbum(albumId, { [field]: value }));
   };
 
-  const handleAddItem = (albumId: string) => {
+  const handleAddItem = async (albumId: string) => {
     if (!itemForm.url) return;
     const newItem = { id: `g${Date.now()}`, type: itemForm.type as "image" | "video", url: itemForm.url };
-    setAlbumList(addItem(albumId, newItem));
+    setAlbumList(await addItem(albumId, newItem));
     setItemForm({ type: "image", url: "" });
   };
 
-  const handleDeleteItem = (albumId: string, itemId: string) => {
-    setAlbumList(deleteItem(albumId, itemId));
+  const handleDeleteItem = async (albumId: string, itemId: string) => {
+    setAlbumList(await deleteItem(albumId, itemId));
   };
 
-  if (!albumList) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-secondary-text">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
