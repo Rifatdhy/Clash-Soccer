@@ -81,11 +81,11 @@ INSERT INTO settings (id, community_name, description, logo_url, banner_url, wha
 VALUES (
   'default',
   'Clash.Soccer',
-  'Komunitas mini soccer terbesar di Jakarta. Bermain, berkompetisi, dan bertumbuh bersama.',
+  'Komunitas mini soccer terbesar di Depok. Bermain, berkompetisi, dan bertumbuh bersama.',
   '',
   '',
   '6281234567890',
   'clash.soccer',
-  'Lapangan ABC Sports, Jakarta Selatan',
+  'Detos Mini Soccer, Depok',
   'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.0!2d106.8!3d-6.2!'
 ) ON CONFLICT (id) DO NOTHING;

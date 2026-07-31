@@ -21,6 +21,10 @@ const oswald = Oswald({
 export const metadata: Metadata = {
   title: "Clash.Soccer — Less Talk. More Football.",
   description: "Komunitas mini soccer — informasi jadwal, RSVP, galeri, dan berita dalam satu platform modern.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
   openGraph: {
     title: "Clash.Soccer",
     description: "Komunitas mini soccer modern.",

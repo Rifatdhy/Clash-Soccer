@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit3, Trash2, X, Upload, Image as ImageIcon } from "lucide-react";
+import { Plus, Edit3, Trash2, X, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
 import Card from "@/components/card";
 import { formatDate } from "@/lib/format";
 import type { NewsItem } from "@/types";
@@ -195,7 +196,7 @@ export default function AdminNews() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border w-full max-w-lg p-6"
+              className="bg-surface border border-border w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -243,8 +244,13 @@ export default function AdminNews() {
                     className="relative border-2 border-dashed border-border hover:border-accent/50 transition-colors cursor-pointer"
                   >
                     {form.coverImage ? (
-                      <div className="relative">
-                        <img src={form.coverImage} alt="cover" className="w-full h-48 object-cover" />
+                      <div className="relative h-48 overflow-hidden rounded-sm">
+                        <Image
+                          src={form.coverImage}
+                          alt="cover"
+                          fill
+                          className="object-contain p-2"
+                        />
                         <div className="absolute inset-0 bg-charcoal/0 hover:bg-charcoal/40 transition-colors flex items-center justify-center">
                           <span className="text-xs uppercase tracking-wider text-primary-text opacity-0 hover:opacity-100 transition-opacity">
                             Ganti Foto

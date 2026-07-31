@@ -6,7 +6,7 @@ import { ChevronDown, Search } from "lucide-react";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import { getFaqs } from "@/lib/settings-store";
-import { type FaqItem } from "@/data/mock";
+import type { FaqItem } from "@/types";
 
 export default function FAQPage() {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -21,8 +21,9 @@ export default function FAQPage() {
 
   const filtered = faqs.filter(
     (faq) =>
-      faq.question.toLowerCase().includes(search.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(search.toLowerCase())
+      faq.question.trim() !== "" &&
+      (faq.question.toLowerCase().includes(search.toLowerCase()) ||
+        faq.answer.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (

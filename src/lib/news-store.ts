@@ -1,7 +1,7 @@
-import { type NewsItem } from "@/data/mock";
+import { type NewsItem } from "@/types";
 
 // Helper to make API requests
-async function apiRequest(method: string, body?: any, queryParams?: string) {
+async function apiRequest(method: string, body?: unknown, queryParams?: string) {
   const url = `/api/news${queryParams || ""}`;
   const response = await fetch(url, {
     method,
@@ -13,7 +13,11 @@ async function apiRequest(method: string, body?: any, queryParams?: string) {
   if (!response.ok) {
     throw new Error(`API request failed: ${response.statusText}`);
   }
-  return response.json();
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error(`API returned error: ${result.error.message}`);
+  }
+  return result.data;
 }
 
 export async function getNews(): Promise<NewsItem[]> {
@@ -48,7 +52,7 @@ export async function getNews(): Promise<NewsItem[]> {
 export async function getNewsBySlug(slug: string): Promise<NewsItem | undefined> {
   try {
     const news = await apiRequest("GET", undefined, `?slug=${slug}`);
-    return news[0];
+    return Array.isArray(news) ? news[0] : undefined;
   } catch (error) {
     console.error(`Failed to get news with slug ${slug}, trying fallback:`, error);
     // Try to find in fallback data

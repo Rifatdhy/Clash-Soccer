@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { getSettings } from "@/lib/settings-store";
-import { type Setting } from "@/data/mock";
+import type { Setting } from "@/types";
 import { MessageCircle } from "lucide-react";
 
 function InstagramIcon({ size }: { size: number }) {
@@ -30,8 +31,17 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-16 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
-            <Link href="/" className="text-xl font-bold tracking-tight text-primary-text font-display">
-              CLASH.<span className="text-secondary-text">SOCCER</span>
+            <Link href="/" className="flex items-center gap-2 md:gap-3">
+              <Image 
+                src="/logo.png" 
+                alt="Clash Soccer Logo" 
+                width={1024} 
+                height={1536} 
+                className="h-7 w-auto md:h-8 object-contain" 
+              />
+              <span className="text-lg md:text-xl font-bold tracking-tight text-primary-text font-display">
+                CLASH.<span className="text-secondary-text">SOCCER</span>
+              </span>
             </Link>
             <p className="mt-4 text-sm text-secondary-text leading-relaxed max-w-xs">
               {settings.description}

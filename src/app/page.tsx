@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, MessageCircle, ChevronDown, MapPin, Clock, Users } from "lucide-react";
@@ -19,11 +20,11 @@ function InstagramIcon({ size }: { size: number }) {
   );
 }
 import Section, { SectionTitle, SectionSubtitle } from "@/components/section";
-import Card from "@/components/card";
 import MatchCard from "@/components/match-card";
 import NewsCard from "@/components/news-card";
 import GalleryCard from "@/components/gallery-card";
-import { formatDate, formatTime, type Match, type NewsItem, type FaqItem, type Setting, type Album } from "@/data/mock";
+import { formatDate, formatTime } from "@/lib/format";
+import type { Match, NewsItem, FaqItem, Setting, Album } from "@/types";
 
 function useRandomParticles(count: number) {
   const [particles, setParticles] = useState<{ left: string; top: string; duration: number; delay: number }[]>([]);
@@ -69,7 +70,7 @@ export default function Home() {
         setUpcomingMatches(upcoming.slice(0, 3));
         setNextMatch(upcoming[0]);
         setLatestNews(news.slice(0, 3));
-        setFaqPreview(faqs.slice(0, 3));
+        setFaqPreview(faqs.filter((faq) => faq.question.trim() !== "").slice(0, 3));
         setSettings(settingsData);
       } catch (error) {
         console.error("Error loading homepage data:", error);
@@ -248,9 +249,17 @@ export default function Home() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.32, 0.72, 0, 1] }}
-            className="aspect-[4/3] bg-elevated border border-border"
+            className="aspect-[4/3] bg-black/40 border border-border rounded-sm overflow-hidden relative flex items-center justify-center p-6 md:p-10"
           >
-            <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/10 pointer-events-none" />
+            <Image
+              src="/logo.png"
+              alt="Clash Soccer Logo"
+              width={260}
+              height={390}
+              priority
+              className="relative block w-[190px] md:w-[270px] h-auto object-contain drop-shadow-[0_16px_36px_rgba(0,0,0,0.45)]"
+            />
           </motion.div>
         </div>
       </Section>

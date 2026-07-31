@@ -1,27 +1,47 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import Image from "next/image";
 import { Plus, Trash2 } from "lucide-react";
 import Card from "@/components/card";
-import { type FaqItem, type Setting } from "@/data/mock";
 import { getSettings, updateSettings, getFaqs, createFaq, updateFaq as updateFaqStore, deleteFaq } from "@/lib/settings-store";
+import type { FaqItem, Setting } from "@/types";
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<Setting | null>(null);
   const [faqList, setFaqList] = useState<FaqItem[] | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getSettings().then(setSettings);
     getFaqs().then(setFaqList);
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!settings) return;
-    updateSettings(settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaving(true);
+    setError(null);
+    try {
+      await updateSettings(settings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menyimpan pengaturan.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: "logoUrl" | "bannerUrl") => {
+    const file = e.target.files?.[0];
+    if (!file || !settings) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSettings({ ...settings, [field]: reader.result as string });
+    };
+    reader.readAsDataURL(file);
   };
 
   const addFaq = async () => {
@@ -34,7 +54,7 @@ export default function AdminSettings() {
   };
 
   const handleUpdateFaq = async (id: string, field: "question" | "answer", value: string) => {
-    setFaqList(await updateFaqStore(id, field, value));
+    setFaqList(await updateFaqStore(id, { [field]: value }));
   };
 
   const handleDeleteFaq = async (id: string) => {
@@ -65,11 +85,78 @@ export default function AdminSettings() {
               rows={3}
               className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent resize-none"
             />
-            <div className="border-2 border-dashed border-border p-6 text-center">
-              <p className="text-sm text-secondary-text">Upload Logo</p>
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                Logo Komunitas
+              </label>
+              <div className="flex gap-4 items-center">
+                <div className="relative w-16 h-16 bg-elevated border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {settings.logoUrl ? (
+                    <Image src={settings.logoUrl} alt="Logo" fill sizes="4rem" className="object-cover" />
+                  ) : (
+                    <span className="text-[10px] text-secondary-text">No Logo</span>
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange(e, "logoUrl")}
+                    className="hidden"
+                    id="logo-upload"
+                  />
+                  <label
+                    htmlFor="logo-upload"
+                    className="inline-block px-3 py-1.5 border border-border text-xs text-primary-text hover:bg-elevated cursor-pointer transition-colors uppercase tracking-wider"
+                  >
+                    Pilih File Logo
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Atau masukkan URL Logo"
+                    value={settings.logoUrl}
+                    onChange={(e) => setSettings({ ...settings, logoUrl: e.target.value })}
+                    className="w-full bg-elevated border border-border px-3 py-2 text-xs text-primary-text placeholder:text-secondary-text/50 focus:outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="border-2 border-dashed border-border p-6 text-center">
-              <p className="text-sm text-secondary-text">Upload Banner</p>
+
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                Banner Komunitas
+              </label>
+              <div className="flex gap-4 items-center">
+                <div className="relative w-28 h-16 bg-elevated border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {settings.bannerUrl ? (
+                    <Image src={settings.bannerUrl} alt="Banner" fill sizes="7rem" className="object-cover" />
+                  ) : (
+                    <span className="text-[10px] text-secondary-text">No Banner</span>
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange(e, "bannerUrl")}
+                    className="hidden"
+                    id="banner-upload"
+                  />
+                  <label
+                    htmlFor="banner-upload"
+                    className="inline-block px-3 py-1.5 border border-border text-xs text-primary-text hover:bg-elevated cursor-pointer transition-colors uppercase tracking-wider"
+                  >
+                    Pilih File Banner
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Atau masukkan URL Banner"
+                    value={settings.bannerUrl}
+                    onChange={(e) => setSettings({ ...settings, bannerUrl: e.target.value })}
+                    className="w-full bg-elevated border border-border px-3 py-2 text-xs text-primary-text placeholder:text-secondary-text/50 focus:outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </Card>
@@ -150,11 +237,18 @@ export default function AdminSettings() {
           </div>
         </Card>
 
+        {error && (
+          <div className="p-4 border border-red-500/20 bg-red-500/10 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
         <button
           onClick={handleSave}
-          className="w-full py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity"
+          disabled={saving}
+          className="w-full py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {saved ? "Saved!" : "Save Settings"}
+          {saving ? "Saving..." : saved ? "Saved!" : "Save Settings"}
         </button>
       </div>
     </div>

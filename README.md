@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚽ Clash.Soccer
 
-## Getting Started
+Website komunitas mini soccer — jadwal pertandingan, RSVP, berita, galeri, dan FAQ.
 
-First, run the development server:
+Dibangun dengan **Next.js 16** + **PostgreSQL**.
+
+## Fitur
+
+- **Public**: Homepage, Schedule (detail + RSVP), News, Gallery, FAQ, About, Contact
+- **Admin** (login): Dashboard, kelola Match, RSVP, Gallery (album + item), News, Settings (kontak, FAQ, logo/banner)
+- Autentikasi admin: JWT (httpOnly cookie), proteksi route `/admin` via proxy
+- API: validasi Zod, parameterized query (anti SQL-injection), envelope `{ success, data, error }`
+
+## Persiapan
+
+Prasyarat: Node.js 20+, PostgreSQL 15+.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # lalu isi variabelnya
+npm run db:init              # buat skema database
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Lihat [CARA_RUN_PROJECT.md](./CARA_RUN_PROJECT.md) untuk panduan lengkap (setup lokal, deploy Vercel/VPS, troubleshooting).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Env Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variabel | Keterangan |
+|----------|-----------|
+| `DATABASE_URL` | Connection string PostgreSQL |
+| `ADMIN_USERNAME` | Username admin |
+| `ADMIN_PASSWORD` | Password admin |
+| `ADMIN_AUTH_SECRET` | Secret untuk JWT (acak, panjang) |
+| `PG_REJECT_UNAUTHORIZED` | (opsional) `false` untuk self-signed cert |
+| `PG_CA_CERT` | (opsional) path ke CA cert |
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Script | Fungsi |
+|--------|--------|
+| `npm run dev` | Development server |
+| `npm run build` | Build production |
+| `npm start` | Jalankan hasil build |
+| `npm run lint` | ESLint |
+| `npm run db:init` | Inisialisasi skema database |

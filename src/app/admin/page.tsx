@@ -7,8 +7,8 @@ import { getMatches } from "@/lib/match-store";
 import { getNews } from "@/lib/news-store";
 import { getAlbums } from "@/lib/album-store";
 import { getRsvps } from "@/lib/rsvp-store";
-import { Calendar, Users, Image, Newspaper } from "lucide-react";
-import type { Match, NewsItem, Album, RsvpEntry } from "@/types";
+import { Calendar, Users, Newspaper, ImageIcon } from "lucide-react";
+import type { Match, NewsItem, RsvpEntry } from "@/types";
 
 export default function AdminDashboard() {
   const [albumCount, setAlbumCount] = useState(0);
@@ -72,7 +72,7 @@ export default function AdminDashboard() {
       color: "text-accent",
     },
     {
-      icon: Image,
+      icon: ImageIcon,
       label: "Albums",
       value: albumCount,
       color: "text-accent",
@@ -86,31 +86,49 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div>
-      <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-text mb-8">
-        Dashboard
-      </h1>
+    <div className="space-y-8 md:space-y-10">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-text">
+            Dashboard
+          </h1>
+          <p className="mt-2 text-sm text-secondary-text">
+            Ringkasan singkat aktivitas admin
+          </p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 md:gap-4">
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.08, ease: [0.32, 0.72, 0, 1] }}
+            transition={{ duration: 0.35, delay: i * 0.06, ease: [0.32, 0.72, 0, 1] }}
           >
-            <Card hover={false}>
-              <stat.icon size={24} className={stat.color} />
-              <p className="text-3xl font-bold text-primary-text mt-4">{stat.value}</p>
-              <p className="text-sm text-secondary-text mt-1">{stat.label}</p>
+            <Card
+              hover={false}
+              className="rounded-2xl p-4 md:p-6 shadow-none"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-black/20">
+                  <stat.icon size={20} className={stat.color} />
+                </div>
+                <div>
+                  <p className="text-2xl md:text-3xl font-bold text-primary-text leading-none">
+                    {stat.value}
+                  </p>
+                  <p className="mt-1 text-sm text-secondary-text">{stat.label}</p>
+                </div>
+              </div>
             </Card>
           </motion.div>
         ))}
       </div>
 
-      <div className="mt-12">
-        <h2 className="text-lg font-semibold text-primary-text mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-primary-text">Quick Actions</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[
             { label: "Add Match", href: "/admin/matches" },
             { label: "View RSVPs", href: "/admin/rsvp" },
@@ -123,8 +141,8 @@ export default function AdminDashboard() {
               href={action.href}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 + i * 0.05 }}
-              className="block p-4 bg-elevated border border-border text-sm text-primary-text hover:bg-surface transition-colors"
+              transition={{ duration: 0.35, delay: 0.25 + i * 0.05 }}
+              className="flex items-center rounded-xl border border-border bg-elevated px-4 py-3 text-sm font-medium text-primary-text transition-colors hover:bg-surface"
             >
               {action.label}
             </motion.a>

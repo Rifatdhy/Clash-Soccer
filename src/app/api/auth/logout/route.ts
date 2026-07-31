@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ADMIN_AUTH_COOKIE } from "@/lib/admin-auth";
+import { STORAGE_KEYS } from "@/lib/constants";
 
 export async function POST() {
   const response = NextResponse.json({
@@ -7,9 +7,9 @@ export async function POST() {
     message: "Logout successful",
   });
 
-  response.cookies.set(ADMIN_AUTH_COOKIE, "", {
+  response.cookies.set(STORAGE_KEYS.ADMIN_AUTH_COOKIE, "", {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     maxAge: 0,
     path: "/",

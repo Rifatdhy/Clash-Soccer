@@ -5,7 +5,7 @@ import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import MatchCard from "@/components/match-card";
 import { getUpcomingMatches, getCompletedMatches } from "@/lib/match-store";
-import { type Match } from "@/data/mock";
+import type { Match } from "@/types";
 
 export default function SchedulePage() {
   const [showPast, setShowPast] = useState(false);

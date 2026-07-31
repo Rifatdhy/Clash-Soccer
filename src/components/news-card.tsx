@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Card from "./card";
-import { type NewsItem, formatDate } from "@/data/mock";
+import { type NewsItem } from "@/types";
+import { formatDate } from "@/lib/format";
+import Image from "next/image";
 
 interface NewsCardProps {
   item: NewsItem;
@@ -20,12 +22,14 @@ export default function NewsCard({ item, index = 0 }: NewsCardProps) {
     >
       <Link href={`/news/${item.slug}`}>
         <Card className="h-full group">
-          <div className="aspect-[16/9] bg-elevated mb-6 overflow-hidden">
+          <div className="aspect-[16/9] bg-elevated mb-6 overflow-hidden relative">
             {item.coverImage ? (
-              <img 
-                src={item.coverImage} 
+              <Image
+                src={item.coverImage}
                 alt={item.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-contain object-center p-3 group-hover:scale-[1.02] transition-transform duration-500"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />

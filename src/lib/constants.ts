@@ -40,6 +40,7 @@ export const DEFAULTS = {
 export const STORAGE_KEYS = {
   AUTH: "clash-soccer-auth",
   ADMIN_USERNAME: "adminUsername",
+  ADMIN_AUTH_COOKIE: "clash_admin_session",
 } as const;
 
 // Animation Durations (in seconds)

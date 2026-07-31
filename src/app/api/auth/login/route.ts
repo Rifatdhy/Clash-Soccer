@@ -1,41 +1,63 @@
-import { NextResponse } from "next/server";
-import { ADMIN_AUTH_COOKIE, createAdminSessionToken } from "@/lib/admin-auth";
+import { z } from "zod";
+import crypto from "crypto";
+import { createAdminSessionToken } from "@/lib/admin-auth";
+import { STORAGE_KEYS } from "@/lib/constants";
+import { success, unauthorized, serverError, validate, error } from "@/lib/api-helpers";
+import { clearRateLimit, getClientIp, isRateLimited } from "@/lib/rate-limit";
+
+const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+// Constant-time comparison to prevent timing attacks using SHA-256 to allow differing lengths safely
+function timingSafeEqual(a: string, b: string) {
+  const hashA = crypto.createHash("sha256").update(a).digest();
+  const hashB = crypto.createHash("sha256").update(b).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
 
 export async function POST(req: Request) {
-  try {
-    const { username, password } = await req.json();
+  return validate(req, loginSchema, async (data) => {
+    try {
+      const ip = getClientIp(req);
+      if (isRateLimited(ip)) {
+        return error("Too many login attempts. Please try again later.", 429);
+      }
 
-    // Get credentials from environment variables
-    const adminUsername = process.env.ADMIN_USERNAME || "admin";
-    const adminPassword = process.env.ADMIN_PASSWORD || "change_this_password";
+      const { username, password } = data;
 
-    if (username === adminUsername && password === adminPassword) {
-      const token = await createAdminSessionToken(username);
-      const response = NextResponse.json({
-        success: true,
-        message: "Login successful",
-        user: { username },
-      });
+      const adminUsername = process.env.ADMIN_USERNAME;
+      const adminPassword = process.env.ADMIN_PASSWORD;
 
-      response.cookies.set(ADMIN_AUTH_COOKIE, token, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24,
-        path: "/",
-      });
+      if (!adminUsername || !adminPassword) {
+        return serverError(
+          new Error("Missing admin credentials in environment"),
+          "Server configuration error"
+        );
+      }
 
-      return response;
+      const isUsernameMatch = timingSafeEqual(username, adminUsername);
+      const isPasswordMatch = timingSafeEqual(password, adminPassword);
+
+      if (isUsernameMatch && isPasswordMatch) {
+        clearRateLimit(ip);
+        const token = await createAdminSessionToken(username);
+        const response = success({ message: "Login successful", user: { username } });
+
+        response.cookies.set(STORAGE_KEYS.ADMIN_AUTH_COOKIE, token, {
+          httpOnly: true,
+          sameSite: "strict", // Use 'strict' for better security
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+        });
+
+        return response;
+      }
+
+      return unauthorized("Invalid credentials");
+    } catch (e) {
+      return serverError(e, "Error during login process");
     }
-
-    return NextResponse.json(
-      { success: false, message: "Invalid credentials" },
-      { status: 401 }
-    );
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
-  }
+  });
 }

@@ -1,7 +1,11 @@
 import type { Participant, RsvpEntry } from "@/types";
 
 // Helper to make API requests
-async function apiRequest(method: string, body?: any, queryParams?: string) {
+async function apiRequest<T>(
+  method: string,
+  body?: unknown,
+  queryParams?: string
+): Promise<T> {
   const url = `/api/rsvps${queryParams || ""}`;
   const response = await fetch(url, {
     method,
@@ -10,10 +14,15 @@ async function apiRequest(method: string, body?: any, queryParams?: string) {
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.statusText}`);
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    const errorMessage = result?.error?.message || response.statusText || "An unknown API error occurred";
+    throw new Error(errorMessage);
   }
-  return response.json();
+
+  return result.data as T;
 }
 
 export async function getRsvpByMatch(matchId: string): Promise<RsvpEntry[]> {
@@ -52,7 +61,7 @@ export async function getParticipantCountByMatch(matchId: string): Promise<numbe
 export async function addRsvp(matchId: string, participants: Participant[]): Promise<RsvpEntry> {
   try {
     return await apiRequest("POST", { matchId, participants });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to add RSVP:", error);
     throw error;
   }

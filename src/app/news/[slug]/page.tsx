@@ -7,7 +7,9 @@ import { ArrowLeft, Share2 } from "lucide-react";
 import Link from "next/link";
 import Section from "@/components/section";
 import { getNewsBySlug } from "@/lib/news-store";
-import { formatDate, type NewsItem } from "@/data/mock";
+import { formatDate } from "@/lib/format";
+import type { NewsItem } from "@/types";
+import Image from "next/image";
 
 export default function NewsDetailPage() {
   const params = useParams();
@@ -63,13 +65,16 @@ export default function NewsDetailPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="aspect-[16/9] bg-elevated border border-border mb-12 overflow-hidden"
+            className="relative aspect-[16/9] bg-elevated border border-border mb-12 overflow-hidden"
           >
             {article.coverImage ? (
-              <img 
+              <Image 
                 src={article.coverImage} 
                 alt={article.title}
-                className="w-full h-full object-cover"
+                fill
+                sizes="(min-width: 1280px) 768px, 100vw"
+                className="object-cover"
+                priority
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />

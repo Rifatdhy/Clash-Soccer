@@ -3,19 +3,21 @@
  * Shared helpers for PostgreSQL queries
  */
 
+type Primitive = string | number | boolean | Date | null;
+
 interface FieldMapping {
   [camelCase: string]: string; // camelCase -> snake_case
 }
 
 interface UpdateQueryResult {
   query: string;
-  values: any[];
+  values: Primitive[];
 }
 
 /**
  * Build dynamic UPDATE query with parameterized values
  * Prevents SQL injection and reduces code duplication
- * 
+ *
  * @param tableName - Name of the table to update
  * @param id - ID of the record to update
  * @param updates - Object with camelCase keys and their new values
@@ -25,18 +27,18 @@ interface UpdateQueryResult {
 export function buildUpdateQuery(
   tableName: string,
   id: string,
-  updates: Record<string, any>,
+  updates: Record<string, unknown>,
   fieldMapping: FieldMapping
 ): UpdateQueryResult | null {
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: Primitive[] = [];
   let paramIndex = 1;
 
   // Build SET clause
   for (const [camelKey, snakeColumn] of Object.entries(fieldMapping)) {
     if (updates[camelKey] !== undefined) {
       fields.push(`${snakeColumn} = $${paramIndex++}`);
-      values.push(updates[camelKey]);
+      values.push(updates[camelKey] as Primitive);
     }
   }
 
@@ -55,8 +57,8 @@ export function buildUpdateQuery(
  * Convert snake_case object keys to camelCase
  * Used for mapping database rows to frontend types
  */
-export function toCamelCase<T = any>(obj: Record<string, any>): T {
-  const result: Record<string, any> = {};
+export function toCamelCase<T>(obj: Record<string, unknown>): T {
+  const result: Record<string, unknown> = {};
   
   for (const [key, value] of Object.entries(obj)) {
     const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -70,8 +72,8 @@ export function toCamelCase<T = any>(obj: Record<string, any>): T {
  * Convert camelCase object keys to snake_case
  * Used for preparing data for database insertion
  */
-export function toSnakeCase(obj: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {};
+export function toSnakeCase(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
   
   for (const [key, value] of Object.entries(obj)) {
     const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);

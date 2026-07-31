@@ -4,7 +4,9 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Play, ExternalLink } from "lucide-react";
 import Card from "./card";
-import { type Album, formatDate } from "@/data/mock";
+import { type Album } from "@/types";
+import { formatDate } from "@/lib/format";
+import Image from "next/image";
 
 interface GalleryCardProps {
   album: Album;
@@ -17,9 +19,16 @@ export default function GalleryCard({ album, index = 0 }: GalleryCardProps) {
   // Jika ada Google Drive link, gunakan <a> tag. Jika tidak, gunakan Next.js Link
   const CardContent = (
     <Card className="h-full group">
-      <div className="aspect-[4/3] bg-elevated mb-6 overflow-hidden relative">
+      <div className="aspect-[4/3] bg-black/40 mb-6 overflow-hidden relative rounded-sm">
         {album.coverUrl ? (
-          <img src={album.coverUrl} alt={album.title} className="w-full h-full object-cover" />
+          <Image
+            src={album.coverUrl}
+            alt={album.title}
+            fill
+            className="object-contain p-3 md:p-4"
+            sizes="(max-width: 768px) 100vw, 50vw"
+            priority={index < 2}
+          />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
         )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -45,8 +46,17 @@ export default function Navbar() {
       >
         <div className="mx-auto max-w-7xl px-4">
           <div className="flex items-center justify-between h-16 md:h-20">
-            <Link href="/" className="text-lg font-bold tracking-tight text-primary-text font-display">
-              CLASH.<span className="text-secondary-text">SOCCER</span>
+            <Link href="/" className="flex items-center gap-2 md:gap-3">
+              <Image 
+                src="/logo.png" 
+                alt="Clash Soccer Logo" 
+                width={1024} 
+                height={1536} 
+                className="h-7 w-auto md:h-10 object-contain" 
+              />
+              <span className="text-base md:text-lg font-bold tracking-tight text-primary-text font-display">
+                CLASH.<span className="text-secondary-text">SOCCER</span>
+              </span>
             </Link>
 
             <div className="hidden md:flex items-center gap-8">

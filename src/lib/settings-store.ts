@@ -1,7 +1,11 @@
-import { type Setting, type FaqItem } from "@/data/mock";
+import { type Setting, type FaqItem } from "@/types";
 
 // Helper to make API requests
-async function apiRequest(method: string, body?: any, queryParams?: string) {
+async function apiRequest<T>(
+  method: string,
+  body?: unknown,
+  queryParams?: string
+): Promise<T> {
   const url = `/api/settings${queryParams || ""}`;
   const response = await fetch(url, {
     method,
@@ -10,10 +14,15 @@ async function apiRequest(method: string, body?: any, queryParams?: string) {
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.statusText}`);
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    const errorMessage = result?.error?.message || response.statusText || "An unknown API error occurred";
+    throw new Error(errorMessage);
   }
-  return response.json();
+
+  return result.data as T;
 }
 
 // Settings
@@ -46,13 +55,33 @@ export async function updateSettings(updates: Partial<Setting>): Promise<Setting
 }
 
 // FAQs
+async function faqApiRequest<T>(
+  method: string,
+  body?: unknown,
+  queryParams?: string
+): Promise<T> {
+  const url = `/api/faqs${queryParams || ""}`;
+  const response = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    const errorMessage = result?.error?.message || response.statusText || "An unknown API error occurred";
+    throw new Error(errorMessage);
+  }
+
+  return result.data as T;
+}
+
 export async function getFaqs(): Promise<FaqItem[]> {
   try {
-    const res = await fetch("/api/faqs");
-    if (!res.ok) {
-      throw new Error(`API request failed: ${res.statusText}`);
-    }
-    return await res.json();
+    return await faqApiRequest("GET");
   } catch (error) {
     console.error("Failed to get FAQs:", error);
     return [];
@@ -61,32 +90,16 @@ export async function getFaqs(): Promise<FaqItem[]> {
 
 export async function createFaq(faq: FaqItem): Promise<FaqItem[]> {
   try {
-    const res = await fetch("/api/faqs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(faq),
-    });
-    if (!res.ok) {
-      throw new Error(`API request failed: ${res.statusText}`);
-    }
-    return await res.json();
+    return await faqApiRequest("POST", faq);
   } catch (error) {
     console.error("Failed to create FAQ:", error);
     return getFaqs();
   }
 }
 
-export async function updateFaq(id: string, field: "question" | "answer", value: string): Promise<FaqItem[]> {
+export async function updateFaq(id: string, updates: Partial<FaqItem>): Promise<FaqItem[]> {
   try {
-    const res = await fetch("/api/faqs", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, [field]: value }),
-    });
-    if (!res.ok) {
-      throw new Error(`API request failed: ${res.statusText}`);
-    }
-    return await res.json();
+    return await faqApiRequest("PUT", { id, ...updates });
   } catch (error) {
     console.error(`Failed to update FAQ ${id}:`, error);
     return getFaqs();
@@ -95,13 +108,7 @@ export async function updateFaq(id: string, field: "question" | "answer", value:
 
 export async function deleteFaq(id: string): Promise<FaqItem[]> {
   try {
-    const res = await fetch(`/api/faqs?id=${id}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) {
-      throw new Error(`API request failed: ${res.statusText}`);
-    }
-    return await res.json();
+    return await faqApiRequest("DELETE", undefined, `?id=${id}`);
   } catch (error) {
     console.error(`Failed to delete FAQ ${id}:`, error);
     return getFaqs();

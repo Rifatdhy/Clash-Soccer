@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
-import { login, isAuthenticated } from "@/lib/auth-store";
+import { login, isAuthenticated } from "@/lib/auth-client";
 
 export default function AdminLogin() {
   const searchParams = useSearchParams();
@@ -29,11 +29,11 @@ export default function AdminLogin() {
       setError("Isi username dan password.");
       return;
     }
-    const success = await login(username, password);
-    if (success) {
+    const result = await login(username, password);
+    if (result.success) {
       window.location.href = nextPath;
     } else {
-      setError("Username atau password salah.");
+      setError(result.error || "Username atau password salah.");
     }
   };
 

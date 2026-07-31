@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, X, Video, ExternalLink, Upload } from "lucide-react";
 import Card from "@/components/card";
-import { type Album } from "@/data/mock";
+import { type Album } from "@/types";
 import { getAlbums, createAlbum, deleteAlbum, updateAlbum, addItem, deleteItem } from "@/lib/album-store";
 import DatePicker from "@/components/date-picker";
 
@@ -62,13 +63,17 @@ export default function AdminGallery() {
 
   const handleAddItem = async (albumId: string) => {
     if (!itemForm.url) return;
-    const newItem = { id: `g${Date.now()}`, type: itemForm.type as "image" | "video", url: itemForm.url };
-    setAlbumList(await addItem(albumId, newItem));
+    const newItem = { type: itemForm.type as "image" | "video", url: itemForm.url };
+    const updatedAlbum = await addItem(albumId, newItem);
+    setAlbumList(prev => prev.map(a => a.id === albumId ? updatedAlbum : a));
     setItemForm({ type: "image", url: "" });
   };
 
   const handleDeleteItem = async (albumId: string, itemId: string) => {
-    setAlbumList(await deleteItem(albumId, itemId));
+    if (window.confirm("Are you sure you want to delete this item?")) {
+      const updatedAlbum = await deleteItem(albumId, itemId);
+      setAlbumList(prev => prev.map(a => a.id === albumId ? updatedAlbum : a));
+    }
   };
 
   if (loading) {
@@ -106,20 +111,26 @@ export default function AdminGallery() {
           >
             <div className="cursor-pointer" onClick={() => setManagingId(album.id)}>
               <Card className="relative group">
-              <button
-                onClick={(e) => { e.stopPropagation(); handleDelete(album.id); }}
-                className="absolute top-3 right-3 z-10 p-1.5 bg-charcoal/80 text-secondary-text hover:text-accent transition-colors opacity-0 group-hover:opacity-100"
-              >
-                <Trash2 size={14} />
-              </button>
-              <div className="aspect-[4/3] bg-elevated mb-4 overflow-hidden">
-                {album.coverUrl ? (
-                  <img src={album.coverUrl} alt={album.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
-                )}
-              </div>
-              <h3 className="text-base font-semibold text-primary-text">{album.title}</h3>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDelete(album.id); }}
+                  className="absolute top-3 right-3 z-10 p-1.5 bg-charcoal/80 text-secondary-text hover:text-accent transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Trash2 size={14} />
+                </button>
+                <div className="aspect-[4/3] bg-elevated mb-4 overflow-hidden relative rounded-sm">
+                  {album.coverUrl ? (
+                    <Image
+                      src={album.coverUrl}
+                      alt={album.title}
+                      fill
+                      className="object-contain p-2"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+                  )}
+                </div>
+                <h3 className="text-base font-semibold text-primary-text">{album.title}</h3>
               <p className="text-xs text-secondary-text mt-1">{album.items.length} items</p>
               {album.gdriveLink && (
                 <p className="text-xs text-accent mt-1 flex items-center gap-1">
@@ -188,8 +199,13 @@ export default function AdminGallery() {
                     className="relative border-2 border-dashed border-border hover:border-accent/50 transition-colors cursor-pointer"
                   >
                     {form.coverUrl ? (
-                      <div className="relative">
-                        <img src={form.coverUrl} alt="cover" className="w-full h-36 object-cover" />
+                      <div className="relative h-36 overflow-hidden rounded-sm">
+                        <Image
+                          src={form.coverUrl}
+                          alt="cover"
+                          fill
+                          className="object-contain p-2"
+                        />
                         <div className="absolute inset-0 bg-charcoal/0 hover:bg-charcoal/40 transition-colors flex items-center justify-center">
                           <span className="text-xs uppercase tracking-wider text-primary-text opacity-0 hover:opacity-100 transition-opacity">
                             Change Photo
@@ -291,11 +307,16 @@ export default function AdminGallery() {
                     placeholder="https://example.com/cover.jpg"
                     className="flex-1 bg-elevated border border-border px-4 py-2.5 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
                   />
-                  {managingAlbum.coverUrl && (
-                    <div className="w-12 h-12 bg-elevated border border-border overflow-hidden shrink-0">
-                      <img src={managingAlbum.coverUrl} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
+                    {managingAlbum.coverUrl && (
+                      <div className="relative w-12 h-12 bg-elevated border border-border overflow-hidden shrink-0">
+                        <Image
+                          src={managingAlbum.coverUrl}
+                          alt="Cover preview"
+                          fill
+                          className="object-contain p-1"
+                        />
+                      </div>
+                    )}
                 </div>
               </div>
 
@@ -321,7 +342,7 @@ export default function AdminGallery() {
                     {managingAlbum.items.map((item) => (
                       <div key={item.id} className="relative group/item aspect-[4/3] bg-elevated border border-border overflow-hidden">
                         {item.url && item.type === "image" ? (
-                          <img src={item.url} alt="" className="w-full h-full object-cover" />
+                          <Image src={item.url} alt="" fill sizes="20vw" className="object-cover" />
                         ) : item.url && item.type === "video" ? (
                           <div className="w-full h-full bg-gradient-to-br from-elevated to-border flex items-center justify-center">
                             <Video size={20} className="text-secondary-text" />

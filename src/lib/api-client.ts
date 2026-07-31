@@ -3,34 +3,48 @@
  * Centralized HTTP request handling with consistent error handling
  */
 
+// --- Custom Error for API Failures ---
 export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public statusText: string
+    public details?: unknown
   ) {
     super(message);
     this.name = "ApiError";
   }
 }
 
+// --- Standard API Response Shape from Backend ---
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    message: string;
+    details?: unknown;
+  };
+}
+
+// --- Request Configuration ---
 interface RequestOptions {
   method: "GET" | "POST" | "PUT" | "DELETE";
-  body?: any;
+  body?: Record<string, unknown> | unknown[];
   queryParams?: string;
 }
 
 /**
- * Make an API request with consistent error handling
+ * Make an API request with consistent error handling.
+ * Parses the standard API response format.
+ * @returns The `data` property of the response if successful.
+ * @throws {ApiError} if the request fails or the API returns an error.
  */
-export async function apiRequest<T = any>(
+export async function apiRequest<T>(
   endpoint: string,
   options: RequestOptions
 ): Promise<T> {
   const { method, body, queryParams = "" } = options;
-  
   const url = `${endpoint}${queryParams}`;
-  
+
   const response = await fetch(url, {
     method,
     headers: {
@@ -39,31 +53,40 @@ export async function apiRequest<T = any>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  if (!response.ok) {
+  let responseData: ApiResponse<T>;
+  try {
+    responseData = await response.json();
+  } catch {
+    // Handle cases where the response is not valid JSON
     throw new ApiError(
-      `API request failed: ${response.statusText}`,
-      response.status,
-      response.statusText
+      `Invalid JSON response from server (status: ${response.status})`,
+      response.status
     );
   }
 
-  return response.json();
+  if (!response.ok || !responseData.success) {
+    const errorMessage = responseData.error?.message || `API Error: ${response.status}`;
+    throw new ApiError(errorMessage, response.status, responseData.error?.details);
+  }
+
+  // We can be sure data exists on success
+  return responseData.data as T;
 }
 
 /**
  * Wrapper functions for common HTTP methods
  */
 export const api = {
-  get: <T = any>(endpoint: string, queryParams?: string) =>
+  get: <T>(endpoint: string, queryParams?: string) =>
     apiRequest<T>(endpoint, { method: "GET", queryParams }),
 
-  post: <T = any>(endpoint: string, body: any) =>
+  post: <T>(endpoint:string, body: RequestOptions['body']) =>
     apiRequest<T>(endpoint, { method: "POST", body }),
 
-  put: <T = any>(endpoint: string, body: any) =>
+  put: <T>(endpoint: string, body: RequestOptions['body']) =>
     apiRequest<T>(endpoint, { method: "PUT", body }),
 
-  delete: <T = any>(endpoint: string, queryParams?: string) =>
+  delete: <T>(endpoint: string, queryParams?: string) =>
     apiRequest<T>(endpoint, { method: "DELETE", queryParams }),
 };
 

@@ -5,7 +5,7 @@ import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import GalleryCard from "@/components/gallery-card";
 import { getAlbums } from "@/lib/album-store";
-import { type Album } from "@/data/mock";
+import type { Album } from "@/types";
 
 export default function GalleryPage() {
   const [albums, setAlbums] = useState<Album[] | null>(null);

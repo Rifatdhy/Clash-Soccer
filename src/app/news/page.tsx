@@ -5,12 +5,10 @@ import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import NewsCard from "@/components/news-card";
 import { getNews } from "@/lib/news-store";
-import { type NewsItem } from "@/data/mock";
+import { type NewsItem } from "@/types";
 
 export default function NewsPage() {
-  const [page, setPage] = useState(1);
   const [news, setNews] = useState<NewsItem[] | null>(null);
-  const perPage = 6;
 
   useEffect(() => {
     getNews().then(setNews);

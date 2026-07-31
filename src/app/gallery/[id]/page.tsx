@@ -7,9 +7,10 @@ import { ArrowLeft, X, Play, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
-import { formatDate } from "@/data/mock";
+import { formatDate } from "@/lib/format";
 import { getAlbumById } from "@/lib/album-store";
-import { type Album } from "@/data/mock";
+import { type Album } from "@/types";
+import Image from "next/image";
 
 export default function AlbumDetailPage() {
   const params = useParams();
@@ -55,7 +56,7 @@ export default function AlbumDetailPage() {
               onClick={() => item.type === "image" && item.url && setLightbox(item.url)}
             >
               {item.url && item.type === "image" ? (
-                <img src={item.url} alt="" className="w-full h-full object-cover group-hover:opacity-80 transition-opacity" />
+                <Image src={item.url} alt="" fill sizes="(min-width: 1024px) 25vw, 50vw" className="object-cover group-hover:opacity-80 transition-opacity" />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-elevated to-border group-hover:opacity-80 transition-opacity" />
               )}
@@ -119,9 +120,9 @@ export default function AlbumDetailPage() {
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
-              className="w-full max-w-4xl max-h-[85vh]"
+              className="relative w-full max-w-4xl max-h-[85vh]"
             >
-              <img src={lightbox} alt="" className="w-full h-full object-contain" />
+              <Image src={lightbox} alt="" fill sizes="100vw" className="object-contain" />
             </motion.div>
           </motion.div>
         )}

@@ -1,7 +1,7 @@
-import { type Match } from "@/data/mock";
+import { type Match } from "@/types";
 
 // Helper to make API requests
-async function apiRequest(method: string, body?: any, queryParams?: string) {
+async function apiRequest(method: string, body?: unknown, queryParams?: string) {
   const url = `/api/matches${queryParams || ""}`;
   const response = await fetch(url, {
     method,
@@ -11,31 +11,26 @@ async function apiRequest(method: string, body?: any, queryParams?: string) {
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.statusText}`);
+    const errorBody = await response.text();
+    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorBody}`);
   }
-  return response.json();
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error(`API returned error: ${result.error.message}`);
+  }
+  return result.data;
 }
 
 export async function getMatches(): Promise<Match[]> {
-  try {
-    return await apiRequest("GET");
-  } catch (error) {
-    console.error("Failed to get matches, using fallback:", error);
-    // Return mock matches as fallback
-    return [
-      { id: "m1", title: "Clash Weekly #47", date: "2026-07-27", time: "19:00", location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 20, status: "upcoming" },
-      { id: "m2", title: "Clash Weekly #48", date: "2026-08-03", time: "19:00", location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 15, status: "upcoming" },
-      { id: "m3", title: "Clash Weekly #46", date: "2026-07-20", time: "19:00", location: "Lapangan ABC Sports", slotsTotal: 20, slotsAvailable: 0, status: "completed" },
-    ];
-  }
+  return await apiRequest("GET");
 }
 
 export async function getMatchById(id: string): Promise<Match | undefined> {
   try {
-    const response = await fetch(`/api/matches?id=${id}`);
-    if (!response.ok) return undefined;
-    const match = await response.json();
-    return match;
+    const match = await apiRequest("GET", undefined, `?id=${id}`);
+    if (!match) return undefined;
+
+    return Array.isArray(match) ? match[0] : match;
   } catch (error) {
     console.error(`Failed to get match by id ${id}:`, error);
     return undefined;

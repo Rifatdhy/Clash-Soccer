@@ -1,25 +1,26 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_AUTH_COOKIE, verifyAdminSessionToken } from "@/lib/admin-auth";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { verifyAdminSessionToken } from "@/lib/admin-auth";
+import { STORAGE_KEYS } from "@/lib/constants";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/admin/login") {
-    return NextResponse.next();
-  }
+  // Protect all /admin routes except /admin/login
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    const token = request.cookies.get(STORAGE_KEYS.ADMIN_AUTH_COOKIE)?.value;
+    const isAuthenticated = await verifyAdminSessionToken(token);
 
-  const token = request.cookies.get(ADMIN_AUTH_COOKIE)?.value;
-  const authenticated = await verifyAdminSessionToken(token);
-
-  if (!authenticated) {
-    const loginUrl = new URL("/admin/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    if (!isAuthenticated) {
+      const loginUrl = new URL("/admin/login", request.url);
+      loginUrl.searchParams.set("unauthorized", "true");
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: "/admin/:path*",
 };

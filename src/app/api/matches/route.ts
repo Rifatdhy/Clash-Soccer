@@ -1,21 +1,57 @@
-import { NextResponse } from "next/server";
+import { z } from "zod";
 import { query } from "@/lib/db";
 import {
   badRequest,
-  isNonEmptyString,
-  isValidDateString,
-  isValidTimeString,
+  created,
   notFound,
   requireAdmin,
   serverError,
-  toNonNegativeInteger,
-  toPositiveInteger,
+  success,
+  validate,
 } from "@/lib/api-helpers";
+import type { Match } from "@/types";
 
-const MATCH_STATUSES = ["upcoming", "completed", "ongoing"] as const;
+// --- Zod Schemas ---
 
-// Helper to convert DB snake_case to frontend camelCase
-function mapMatch(row: any) {
+const baseMatchSchema = z.object({
+  id: z.string().trim().min(1, "ID is required"),
+  title: z.string().trim().min(1, "Title is required"),
+  date: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid date"),
+  time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
+  location: z.string().trim().min(1, "Location is required"),
+  slotsTotal: z.number().int().positive("Total slots must be a positive number"),
+  slotsAvailable: z.number().int().nonnegative("Available slots must be a non-negative number").optional(),
+  status: z.enum(["upcoming", "completed", "ongoing"]).default("upcoming"),
+});
+
+const matchSchema = baseMatchSchema.refine((data) => data.slotsAvailable === undefined || data.slotsAvailable <= data.slotsTotal, {
+  message: "Available slots cannot exceed total slots",
+  path: ["slotsAvailable"],
+});
+
+const updateMatchSchema = baseMatchSchema.partial().required({ id: true });
+
+const deleteMatchSchema = z.object({
+  id: z.string().trim().min(1, "ID is required"),
+});
+
+
+// --- Types ---
+
+interface MatchRow {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  slots_total: number;
+  slots_available: number;
+  status: "upcoming" | "completed" | "ongoing";
+}
+
+// --- Helper Functions ---
+
+function mapMatch(row: MatchRow): Match {
   return {
     id: row.id,
     title: row.title,
@@ -28,23 +64,30 @@ function mapMatch(row: any) {
   };
 }
 
+async function getMatches(id?: string) {
+  if (id) {
+    const res = await query<MatchRow>("SELECT * FROM matches WHERE id = $1", [id]);
+    return res.rows.map(mapMatch);
+  }
+  const res = await query<MatchRow>("SELECT * FROM matches ORDER BY date DESC, time DESC");
+  return res.rows.map(mapMatch);
+}
+
+// --- Route Handlers ---
+
 export async function GET(req: Request) {
+  // Public route, no admin check needed to view matches
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (id) {
-      const res = await query("SELECT * FROM matches WHERE id = $1", [id]);
-      if (res.rowCount === 0) {
-        return NextResponse.json({ error: "Match not found" }, { status: 404 });
-      }
-      return NextResponse.json(mapMatch(res.rows[0]));
+    const id = searchParams.get("id") || undefined;
+    const matches = await getMatches(id);
+    if (id && matches.length === 0) {
+      return notFound("Match not found");
     }
-
-    const res = await query("SELECT * FROM matches ORDER BY date DESC, time DESC");
-    return NextResponse.json(res.rows.map(mapMatch));
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return success(id ? matches[0] : matches);
+  } catch (e) {
+    console.error("Error in GET /api/matches:", e);
+    return serverError(e, "Failed to fetch matches");
   }
 }
 
@@ -52,127 +95,99 @@ export async function POST(req: Request) {
   const authError = await requireAdmin(req);
   if (authError) return authError;
 
-  try {
-    const body = await req.json();
-    const { id, title, date, time, location, status } = body;
-    const slotsTotal = toPositiveInteger(body.slotsTotal);
-    const slotsAvailable = toNonNegativeInteger(body.slotsAvailable ?? body.slotsTotal);
-    const safeStatus = status || "upcoming";
+  return validate(req, matchSchema, async (data) => {
+    const { id, title, date, time, location, slotsTotal, status } = data;
+    const slotsAvailable = data.slotsAvailable ?? slotsTotal;
 
-    if (!isNonEmptyString(id) || !isNonEmptyString(title) || !isValidDateString(date) || !isValidTimeString(time) || !isNonEmptyString(location)) {
-      return badRequest("Invalid match data");
+    try {
+      await query(
+        `INSERT INTO matches (id, title, date, time, location, slots_total, slots_available, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [id, title, date, time, location, slotsTotal, slotsAvailable, status]
+      );
+      const matches = await getMatches();
+      return created(matches);
+    } catch (e) {
+      return serverError(e, "Failed to create match");
     }
-
-    if (slotsTotal === null || slotsAvailable === null || slotsAvailable > slotsTotal) {
-      return badRequest("Invalid slot data");
-    }
-
-    if (!MATCH_STATUSES.includes(safeStatus)) {
-      return badRequest("Invalid match status");
-    }
-
-    await query(
-      `INSERT INTO matches (id, title, date, time, location, slots_total, slots_available, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [id.trim(), title.trim(), date, time, location.trim(), slotsTotal, slotsAvailable, safeStatus]
-    );
-
-    const res = await query("SELECT * FROM matches ORDER BY date DESC, time DESC");
-    return NextResponse.json(res.rows.map(mapMatch));
-  } catch (error) {
-    return serverError(error, "Failed to create match");
-  }
+  });
 }
 
 export async function PUT(req: Request) {
   const authError = await requireAdmin(req);
   if (authError) return authError;
 
-  try {
-    const body = await req.json();
-    const { id, ...updates } = body;
+  return validate(req, updateMatchSchema, async (data) => {
+    const { id, ...updates } = data;
+    try {
+      const fields: string[] = [];
+      const values: (string | number | boolean)[] = [];
+      let idx = 1;
 
-    if (!isNonEmptyString(id)) {
-      return badRequest("Match ID is required");
-    }
+      const fieldMapping: Record<string, string> = {
+        title: "title",
+        date: "date",
+        time: "time",
+        location: "location",
+        slotsTotal: "slots_total",
+        slotsAvailable: "slots_available",
+        status: "status",
+      };
 
-    const fields = [];
-    const values = [];
-    let i = 1;
+      const updateMap = updates as Record<string, string | number | boolean | undefined>;
 
-    if (updates.title !== undefined) {
-      if (!isNonEmptyString(updates.title)) return badRequest("Invalid title");
-      fields.push(`title = $${i++}`);
-      values.push(updates.title.trim());
-    }
-    if (updates.date !== undefined) {
-      if (!isValidDateString(updates.date)) return badRequest("Invalid date");
-      fields.push(`date = $${i++}`);
-      values.push(updates.date);
-    }
-    if (updates.time !== undefined) {
-      if (!isValidTimeString(updates.time)) return badRequest("Invalid time");
-      fields.push(`time = $${i++}`);
-      values.push(updates.time);
-    }
-    if (updates.location !== undefined) {
-      if (!isNonEmptyString(updates.location)) return badRequest("Invalid location");
-      fields.push(`location = $${i++}`);
-      values.push(updates.location.trim());
-    }
-    if (updates.slotsTotal !== undefined) {
-      const slotsTotal = toPositiveInteger(updates.slotsTotal);
-      if (slotsTotal === null) return badRequest("Invalid total slots");
-      fields.push(`slots_total = $${i++}`);
-      values.push(slotsTotal);
-    }
-    if (updates.slotsAvailable !== undefined) {
-      const slotsAvailable = toNonNegativeInteger(updates.slotsAvailable);
-      if (slotsAvailable === null) return badRequest("Invalid available slots");
-      fields.push(`slots_available = $${i++}`);
-      values.push(slotsAvailable);
-    }
-    if (updates.status !== undefined) {
-      if (!MATCH_STATUSES.includes(updates.status)) return badRequest("Invalid match status");
-      fields.push(`status = $${i++}`);
-      values.push(updates.status);
-    }
+      for (const key in updateMap) {
+        if (Object.prototype.hasOwnProperty.call(updateMap, key) && fieldMapping[key]) {
+          const value = updateMap[key];
+          if (value !== undefined) {
+            fields.push(`${fieldMapping[key]} = $${idx++}`);
+            values.push(value);
+          }
+        }
+      }
 
-    if (fields.length > 0) {
-      values.push(id.trim());
-      const updated = await query(
-        `UPDATE matches SET ${fields.join(", ")} WHERE id = $${i}`,
+      if (fields.length === 0) {
+        return badRequest("No fields to update");
+      }
+
+      values.push(id);
+      const res = await query(
+        `UPDATE matches SET ${fields.join(", ")} WHERE id = $${idx}`,
         values
       );
 
-      if (updated.rowCount === 0) return notFound("Match not found");
-    }
+      if (res.rowCount === 0) {
+        return notFound("Match not found");
+      }
 
-    const res = await query("SELECT * FROM matches ORDER BY date DESC, time DESC");
-    return NextResponse.json(res.rows.map(mapMatch));
-  } catch (error) {
-    return serverError(error, "Failed to update match");
-  }
+      const updatedMatches = await getMatches();
+      return success(updatedMatches);
+    } catch (e) {
+      return serverError(e, "Failed to update match");
+    }
+  });
 }
 
 export async function DELETE(req: Request) {
   const authError = await requireAdmin(req);
   if (authError) return authError;
 
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  const validation = deleteMatchSchema.safeParse({ id });
+  if (!validation.success) {
+    return badRequest("Match ID is required");
+  }
+
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (!isNonEmptyString(id)) {
-      return badRequest("Match ID is required");
+    const res = await query("DELETE FROM matches WHERE id = $1", [validation.data.id]);
+    if (res.rowCount === 0) {
+      return notFound("Match not found");
     }
-
-    const deleted = await query("DELETE FROM matches WHERE id = $1", [id.trim()]);
-    if (deleted.rowCount === 0) return notFound("Match not found");
-
-    const res = await query("SELECT * FROM matches ORDER BY date DESC, time DESC");
-    return NextResponse.json(res.rows.map(mapMatch));
-  } catch (error) {
-    return serverError(error, "Failed to delete match");
+    const updatedMatches = await getMatches();
+    return success(updatedMatches);
+  } catch (e) {
+    return serverError(e, "Failed to delete match");
   }
 }

@@ -25,6 +25,7 @@ export interface Album {
   title: string;
   matchDate: string;
   coverUrl: string;
+  gdriveLink?: string;
   items: AlbumItem[];
 }
 
@@ -76,7 +77,7 @@ export interface RsvpEntry {
 export type BadgeVariant = "default" | "success" | "warning" | "danger";
 
 // API Response types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

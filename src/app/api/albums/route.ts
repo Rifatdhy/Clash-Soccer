@@ -1,17 +1,58 @@
-import { NextResponse } from "next/server";
+import { z } from "zod";
 import { query } from "@/lib/db";
 import {
   badRequest,
-  isNonEmptyString,
-  isValidDateString,
+  created,
   notFound,
   requireAdmin,
   serverError,
+  success,
+  validate,
 } from "@/lib/api-helpers";
+import type { Album } from "@/types";
 
-const ALBUM_ITEM_TYPES = ["image", "video"] as const;
+// --- Zod Schemas ---
 
-function mapAlbum(row: any, items: any[] = []) {
+const albumItemSchema = z.object({
+  id: z.string().trim().min(1),
+  type: z.enum(["image", "video"]).default("image"),
+  url: z.string().trim().url(),
+  thumbnailUrl: z.string().trim().url().optional().or(z.literal("")),
+});
+
+const albumSchema = z.object({
+  id: z.string().trim().min(1, "ID is required"),
+  title: z.string().trim().min(1, "Title is required"),
+  matchDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid date format",
+  }),
+  coverUrl: z.string().trim().url("Invalid URL format").or(z.literal("")),
+  gdriveLink: z.string().trim().url("Invalid URL format").optional().or(z.literal("")),
+  items: z.array(albumItemSchema).optional(),
+});
+
+const updateAlbumSchema = albumSchema.partial().required({ id: true });
+
+// --- Types ---
+
+interface AlbumRow {
+  id: string;
+  title: string;
+  match_date: string;
+  cover_url: string;
+  gdrive_link?: string;
+}
+
+interface AlbumItemRow {
+  id: string;
+  type: "image" | "video";
+  url: string;
+  thumbnail_url?: string;
+}
+
+// --- Helper Functions ---
+
+function mapAlbum(row: AlbumRow, items: AlbumItemRow[] = []): Album {
   return {
     id: row.id,
     title: row.title,
@@ -27,52 +68,41 @@ function mapAlbum(row: any, items: any[] = []) {
   };
 }
 
-async function getAlbums() {
-  const albumsRes = await query("SELECT * FROM albums ORDER BY match_date DESC");
-  const albums = [];
-
-  for (const album of albumsRes.rows) {
-    const itemsRes = await query("SELECT * FROM album_items WHERE album_id = $1 ORDER BY created_at ASC", [album.id]);
-    albums.push(mapAlbum(album, itemsRes.rows));
+async function getAlbums(id?: string) {
+  if (id) {
+    const albumRes = await query<AlbumRow>("SELECT * FROM albums WHERE id = $1", [id]);
+    if (albumRes.rowCount === 0) {
+      return [];
+    }
+    const itemsRes = await query<AlbumItemRow>(
+      "SELECT * FROM album_items WHERE album_id = $1 ORDER BY created_at ASC",
+      [id]
+    );
+    return [mapAlbum(albumRes.rows[0], itemsRes.rows)];
   }
 
+  const albumsRes = await query<AlbumRow>("SELECT * FROM albums ORDER BY match_date DESC");
+  const albums = [];
+  for (const album of albumsRes.rows) {
+    const itemsRes = await query<AlbumItemRow>(
+      "SELECT * FROM album_items WHERE album_id = $1 ORDER BY created_at ASC",
+      [album.id]
+    );
+    albums.push(mapAlbum(album, itemsRes.rows));
+  }
   return albums;
 }
 
-function validateAlbumItems(items: unknown) {
-  if (items === undefined) return null;
-  if (!Array.isArray(items)) return "Items must be an array";
-
-  for (const item of items) {
-    if (!isNonEmptyString(item?.id) || !isNonEmptyString(item?.url)) {
-      return "Invalid album item";
-    }
-
-    if (item.type !== undefined && !ALBUM_ITEM_TYPES.includes(item.type)) {
-      return "Invalid album item type";
-    }
-  }
-
-  return null;
-}
+// --- Route Handlers ---
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (id) {
-      const albumRes = await query("SELECT * FROM albums WHERE id = $1", [id]);
-      if (albumRes.rowCount === 0) {
-        return NextResponse.json([], { status: 200 });
-      }
-      const itemsRes = await query("SELECT * FROM album_items WHERE album_id = $1 ORDER BY created_at ASC", [id]);
-      return NextResponse.json([mapAlbum(albumRes.rows[0], itemsRes.rows)]);
-    }
-
-    return NextResponse.json(await getAlbums());
-  } catch (error) {
-    return serverError(error, "Failed to fetch albums");
+    const id = searchParams.get("id") || undefined;
+    const albums = await getAlbums(id);
+    return success(albums);
+  } catch (e) {
+    return serverError(e, "Failed to fetch albums");
   }
 }
 
@@ -80,104 +110,87 @@ export async function POST(req: Request) {
   const authError = await requireAdmin(req);
   if (authError) return authError;
 
-  try {
-    const body = await req.json();
-    const { id, title, matchDate, coverUrl, gdriveLink, items } = body;
+  return validate(req, albumSchema, async (data) => {
+    const { id, title, matchDate, coverUrl, gdriveLink, items } = data;
+    try {
+      await query("BEGIN");
 
-    if (!isNonEmptyString(id) || !isNonEmptyString(title) || !isValidDateString(matchDate)) {
-      return badRequest("Invalid album data");
-    }
+      await query(
+        `INSERT INTO albums (id, title, match_date, cover_url, gdrive_link)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [id, title, matchDate, coverUrl, gdriveLink || null]
+      );
 
-    const itemError = validateAlbumItems(items);
-    if (itemError) return badRequest(itemError);
-
-    await query("BEGIN");
-
-    await query(
-      `INSERT INTO albums (id, title, match_date, cover_url, gdrive_link)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
-        id.trim(),
-        title.trim(),
-        matchDate,
-        isNonEmptyString(coverUrl) ? coverUrl.trim() : "",
-        isNonEmptyString(gdriveLink) ? gdriveLink.trim() : null,
-      ]
-    );
-
-    if (Array.isArray(items)) {
-      for (const item of items) {
-        await query(
-          `INSERT INTO album_items (id, album_id, type, url, thumbnail_url)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [
-            item.id.trim(),
-            id.trim(),
-            item.type || "image",
-            item.url.trim(),
-            isNonEmptyString(item.thumbnailUrl) ? item.thumbnailUrl.trim() : null,
-          ]
-        );
+      if (items) {
+        for (const item of items) {
+          await query(
+            `INSERT INTO album_items (id, album_id, type, url, thumbnail_url)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [item.id, id, item.type, item.url, item.thumbnailUrl || null]
+          );
+        }
       }
-    }
 
-    await query("COMMIT");
-    return NextResponse.json(await getAlbums());
-  } catch (error) {
-    await query("ROLLBACK");
-    return serverError(error, "Failed to create album");
-  }
+      await query("COMMIT");
+      const newAlbums = await getAlbums();
+      return created(newAlbums);
+    } catch (e) {
+      await query("ROLLBACK");
+      return serverError(e, "Failed to create album");
+    }
+  });
 }
 
 export async function PUT(req: Request) {
   const authError = await requireAdmin(req);
   if (authError) return authError;
 
-  try {
-    const body = await req.json();
-    const { id, ...updates } = body;
+  return validate(req, updateAlbumSchema, async (data) => {
+    const { id, ...updates } = data;
+    try {
+      const fields: string[] = [];
+      const values: (string | number | boolean)[] = [];
+      let idx = 1;
 
-    if (!isNonEmptyString(id)) {
-      return badRequest("Album ID is required");
-    }
+      const fieldMapping: Record<string, string> = {
+        title: "title",
+        matchDate: "match_date",
+        coverUrl: "cover_url",
+        gdriveLink: "gdrive_link",
+      };
 
-    const fields = [];
-    const values = [];
-    let idx = 1;
+      const updateMap = updates as Record<string, string | number | boolean | undefined>;
 
-    if (updates.title !== undefined) {
-      if (!isNonEmptyString(updates.title)) return badRequest("Invalid title");
-      fields.push(`title = $${idx++}`);
-      values.push(updates.title.trim());
-    }
-    if (updates.matchDate !== undefined) {
-      if (!isValidDateString(updates.matchDate)) return badRequest("Invalid match date");
-      fields.push(`match_date = $${idx++}`);
-      values.push(updates.matchDate);
-    }
-    if (updates.coverUrl !== undefined) {
-      fields.push(`cover_url = $${idx++}`);
-      values.push(isNonEmptyString(updates.coverUrl) ? updates.coverUrl.trim() : "");
-    }
-    if (updates.gdriveLink !== undefined) {
-      fields.push(`gdrive_link = $${idx++}`);
-      values.push(isNonEmptyString(updates.gdriveLink) ? updates.gdriveLink.trim() : null);
-    }
+      for (const key in updateMap) {
+        if (Object.prototype.hasOwnProperty.call(updateMap, key) && fieldMapping[key]) {
+          const value = updateMap[key];
+          if (value !== undefined) {
+            fields.push(`${fieldMapping[key]} = $${idx++}`);
+            values.push(value);
+          }
+        }
+      }
 
-    if (fields.length > 0) {
-      values.push(id.trim());
-      const updated = await query(
+      if (fields.length === 0) {
+        return badRequest("No fields to update");
+      }
+
+      values.push(id);
+      const res = await query(
         `UPDATE albums SET ${fields.join(", ")} WHERE id = $${idx}`,
         values
       );
 
-      if (updated.rowCount === 0) return notFound("Album not found");
-    }
+      if (res.rowCount === 0) {
+        return notFound("Album not found");
+      }
 
-    return NextResponse.json(await getAlbums());
-  } catch (error) {
-    return serverError(error, "Failed to update album");
-  }
+      const updatedAlbums = await getAlbums();
+      return success(updatedAlbums);
+    } catch (e) {
+      return serverError(e, "Failed to update album");
+    }
+  });
 }
 
 export async function DELETE(req: Request) {
@@ -188,15 +201,18 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
-    if (!isNonEmptyString(id)) {
+    if (!id || typeof id !== "string") {
       return badRequest("Album ID is required");
     }
 
-    const deleted = await query("DELETE FROM albums WHERE id = $1", [id.trim()]);
-    if (deleted.rowCount === 0) return notFound("Album not found");
+    const res = await query("DELETE FROM albums WHERE id = $1", [id]);
+    if (res.rowCount === 0) {
+      return notFound("Album not found");
+    }
 
-    return NextResponse.json(await getAlbums());
-  } catch (error) {
-    return serverError(error, "Failed to delete album");
+    const updatedAlbums = await getAlbums();
+    return success(updatedAlbums);
+  } catch (e) {
+    return serverError(e, "Failed to delete album");
   }
 }
