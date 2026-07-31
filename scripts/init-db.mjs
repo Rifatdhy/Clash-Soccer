@@ -11,7 +11,14 @@ if (!connectionString) {
   process.exit(1);
 }
 
-const client = new pg.Client({ connectionString });
+const isProduction = process.env.NODE_ENV === "production";
+const ssl = connectionString.includes("sslmode=disable")
+  ? false
+  : isProduction
+    ? { rejectUnauthorized: process.env.PG_REJECT_UNAUTHORIZED !== "false" }
+    : false;
+
+const client = new pg.Client({ connectionString, ssl });
 const sql = readFileSync(join(__dirname, "../src/lib/schema.sql"), "utf8");
 
 await client.connect();
