@@ -1,7 +1,12 @@
 import { z } from "zod";
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
+import { fetchMatch, fetchMatches, invalidateDataCache } from "@/lib/data";
+import { buildUpdate } from "@/lib/sql";
+import { availableAfterTotalChange } from "@/lib/slots";
+import { isUniqueViolation } from "@/lib/pg-errors";
 import {
   badRequest,
+  conflict,
   created,
   notFound,
   requireAdmin,
@@ -9,7 +14,6 @@ import {
   success,
   validate,
 } from "@/lib/api-helpers";
-import type { Match } from "@/types";
 
 // --- Zod Schemas ---
 
@@ -29,49 +33,33 @@ const matchSchema = baseMatchSchema.refine((data) => data.slotsAvailable === und
   path: ["slotsAvailable"],
 });
 
-const updateMatchSchema = baseMatchSchema.partial().required({ id: true });
+const updateMatchSchema = baseMatchSchema
+  .partial()
+  .required({ id: true })
+  .refine(
+    (data) =>
+      data.slotsAvailable === undefined ||
+      data.slotsTotal === undefined ||
+      data.slotsAvailable <= data.slotsTotal,
+    {
+      message: "Available slots cannot exceed total slots",
+      path: ["slotsAvailable"],
+    }
+  );
 
 const deleteMatchSchema = z.object({
   id: z.string().trim().min(1, "ID is required"),
 });
 
-
-// --- Types ---
-
-interface MatchRow {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  slots_total: number;
-  slots_available: number;
-  status: "upcoming" | "completed" | "ongoing";
-}
-
-// --- Helper Functions ---
-
-function mapMatch(row: MatchRow): Match {
-  return {
-    id: row.id,
-    title: row.title,
-    date: row.date,
-    time: row.time,
-    location: row.location,
-    slotsTotal: row.slots_total,
-    slotsAvailable: row.slots_available,
-    status: row.status,
-  };
-}
-
-async function getMatches(id?: string) {
-  if (id) {
-    const res = await query<MatchRow>("SELECT * FROM matches WHERE id = $1", [id]);
-    return res.rows.map(mapMatch);
-  }
-  const res = await query<MatchRow>("SELECT * FROM matches ORDER BY date DESC, time DESC");
-  return res.rows.map(mapMatch);
-}
+const fieldMapping: Record<string, string> = {
+  title: "title",
+  date: "date",
+  time: "time",
+  location: "location",
+  slotsTotal: "slots_total",
+  slotsAvailable: "slots_available",
+  status: "status",
+};
 
 // --- Route Handlers ---
 
@@ -80,11 +68,14 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id") || undefined;
-    const matches = await getMatches(id);
-    if (id && matches.length === 0) {
-      return notFound("Match not found");
+
+    if (id) {
+      const match = await fetchMatch(id);
+      if (!match) return notFound("Match not found");
+      return success(match);
     }
-    return success(id ? matches[0] : matches);
+
+    return success(await fetchMatches());
   } catch (e) {
     console.error("Error in GET /api/matches:", e);
     return serverError(e, "Failed to fetch matches");
@@ -105,9 +96,13 @@ export async function POST(req: Request) {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [id, title, date, time, location, slotsTotal, slotsAvailable, status]
       );
-      const matches = await getMatches();
-      return created(matches);
+
+      invalidateDataCache();
+      return created(await fetchMatches());
     } catch (e) {
+      if (isUniqueViolation(e)) {
+        return conflict("A match with this ID already exists");
+      }
       return serverError(e, "Failed to create match");
     }
   });
@@ -119,49 +114,48 @@ export async function PUT(req: Request) {
 
   return validate(req, updateMatchSchema, async (data) => {
     const { id, ...updates } = data;
+
     try {
-      const fields: string[] = [];
-      const values: (string | number | boolean)[] = [];
-      let idx = 1;
+      const result = await withTransaction(async (client) => {
+        let effectiveUpdates: Record<string, unknown> = { ...updates };
 
-      const fieldMapping: Record<string, string> = {
-        title: "title",
-        date: "date",
-        time: "time",
-        location: "location",
-        slotsTotal: "slots_total",
-        slotsAvailable: "slots_available",
-        status: "status",
-      };
-
-      const updateMap = updates as Record<string, string | number | boolean | undefined>;
-
-      for (const key in updateMap) {
-        if (Object.prototype.hasOwnProperty.call(updateMap, key) && fieldMapping[key]) {
-          const value = updateMap[key];
-          if (value !== undefined) {
-            fields.push(`${fieldMapping[key]} = $${idx++}`);
-            values.push(value);
+        // Raising or lowering the total must keep the slots already taken.
+        if (updates.slotsTotal !== undefined && updates.slotsAvailable === undefined) {
+          const current = await client.query<{ slots_total: number; slots_available: number }>(
+            "SELECT slots_total, slots_available FROM matches WHERE id = $1 FOR UPDATE",
+            [id]
+          );
+          if (!current.rows[0]) {
+            return { kind: "not_found" as const };
           }
+          effectiveUpdates = {
+            ...effectiveUpdates,
+            slotsAvailable: availableAfterTotalChange(
+              current.rows[0].slots_total,
+              current.rows[0].slots_available,
+              updates.slotsTotal
+            ),
+          };
         }
-      }
 
-      if (fields.length === 0) {
-        return badRequest("No fields to update");
-      }
+        const plan = buildUpdate("matches", "id", id, fieldMapping, effectiveUpdates);
+        if (!plan) {
+          return { kind: "no_fields" as const };
+        }
 
-      values.push(id);
-      const res = await query(
-        `UPDATE matches SET ${fields.join(", ")} WHERE id = $${idx}`,
-        values
-      );
+        const res = await client.query(plan.text, plan.values);
+        if (res.rowCount === 0) {
+          return { kind: "not_found" as const };
+        }
 
-      if (res.rowCount === 0) {
-        return notFound("Match not found");
-      }
+        return { kind: "ok" as const };
+      });
 
-      const updatedMatches = await getMatches();
-      return success(updatedMatches);
+      if (result.kind === "no_fields") return badRequest("No fields to update");
+      if (result.kind === "not_found") return notFound("Match not found");
+
+      invalidateDataCache();
+      return success(await fetchMatches());
     } catch (e) {
       return serverError(e, "Failed to update match");
     }
@@ -185,8 +179,9 @@ export async function DELETE(req: Request) {
     if (res.rowCount === 0) {
       return notFound("Match not found");
     }
-    const updatedMatches = await getMatches();
-    return success(updatedMatches);
+
+    invalidateDataCache();
+    return success(await fetchMatches());
   } catch (e) {
     return serverError(e, "Failed to delete match");
   }

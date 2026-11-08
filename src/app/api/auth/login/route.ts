@@ -2,8 +2,8 @@ import { z } from "zod";
 import crypto from "crypto";
 import { createAdminSessionToken } from "@/lib/admin-auth";
 import { STORAGE_KEYS } from "@/lib/constants";
-import { success, unauthorized, serverError, validate, error } from "@/lib/api-helpers";
-import { clearRateLimit, getClientIp, isRateLimited } from "@/lib/rate-limit";
+import { success, unauthorized, serverError, validate, tooManyRequests } from "@/lib/api-helpers";
+import { consume, getClientIp, resetRateLimit } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -21,8 +21,9 @@ export async function POST(req: Request) {
   return validate(req, loginSchema, async (data) => {
     try {
       const ip = getClientIp(req);
-      if (isRateLimited(ip)) {
-        return error("Too many login attempts. Please try again later.", 429);
+      const limited = consume("login", ip);
+      if (!limited.allowed) {
+        return tooManyRequests("Too many login attempts. Please try again later.");
       }
 
       const { username, password } = data;
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
       const isPasswordMatch = timingSafeEqual(password, adminPassword);
 
       if (isUsernameMatch && isPasswordMatch) {
-        clearRateLimit(ip);
+        resetRateLimit("login", ip);
         const token = await createAdminSessionToken(username);
         const response = success({ message: "Login successful", user: { username } });
 

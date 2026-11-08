@@ -66,6 +66,13 @@ export function conflict(
   return error(message, 409);
 }
 
+export function tooManyRequests(
+  message: string = "Too many requests. Please try again later.",
+  details?: unknown
+): ApiResponse<never> {
+  return error(message, 429, details);
+}
+
 export function serverError(
   err: unknown,
   context: string = "An unexpected error occurred"
@@ -104,30 +111,4 @@ export async function validate<T, U>(
     }
     return serverError(e, "Error during validation");
   }
-}
-
-// --- Type Guards and Parsers (Keeping the useful ones) ---
-
-export function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-export function toPositiveInteger(value: unknown): number | null {
-  const number = Number(value);
-  return Number.isInteger(number) && number > 0 ? number : null;
-}
-
-export function toNonNegativeInteger(value: unknown): number | null {
-  const number = Number(value);
-  return Number.isInteger(number) && number >= 0 ? number : null;
-}
-
-export function isValidDateString(value: unknown): value is string {
-  return isNonEmptyString(value) && !isNaN(Date.parse(value));
-}
-
-export function isValidTimeString(value: unknown): value is string {
-  if (!isNonEmptyString(value)) return false;
-  const timeRegex = /^\d{2}:\d{2}$/;
-  return timeRegex.test(value);
 }

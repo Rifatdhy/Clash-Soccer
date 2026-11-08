@@ -15,5 +15,6 @@ export async function initDatabase() {
     console.log("Database schema initialized successfully.");
   } catch (err) {
     console.error("Failed to initialize database:", err);
+    throw err;
   }
 }

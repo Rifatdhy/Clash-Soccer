@@ -1,4 +1,4 @@
-import { Pool, QueryResultRow } from "pg";
+import { Pool, PoolClient, QueryResultRow } from "pg";
 import fs from "fs";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -26,11 +26,12 @@ const pool = new Pool({
 });
 
 pool.on("error", (err) => {
+  // A broken idle client is not fatal: the pool discards it. Exiting here
+  // would turn a database blip into a full outage.
   console.error("Unexpected error on idle client", err);
-  process.exit(-1);
 });
 
-export async function query<T extends QueryResultRow>(text: string, params?: (string | number | boolean | null)[]) {
+export async function query<T extends QueryResultRow>(text: string, params?: unknown[]) {
   const start = Date.now();
   try {
     const res = await pool.query<T>(text, params);
@@ -42,6 +43,31 @@ export async function query<T extends QueryResultRow>(text: string, params?: (st
   } catch (error) {
     console.error("Error executing query", { text, params, error });
     throw error;
+  }
+}
+
+/**
+ * Run several statements on one connection. `pool.query` hands the client
+ * back after every call, so BEGIN/COMMIT through it is not a transaction.
+ */
+export async function withTransaction<T>(
+  fn: (client: PoolClient) => Promise<T>
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("Failed to roll back transaction", rollbackError);
+    }
+    throw error;
+  } finally {
+    client.release();
   }
 }
 
