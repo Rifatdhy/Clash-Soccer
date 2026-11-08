@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { ZodError, ZodSchema } from "zod";
 import { isAdminRequest } from "@/lib/admin-auth";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger();
 
 // --- Standard API Response Structures ---
 
@@ -36,7 +39,7 @@ export function error(
   status: number = 500,
   details?: unknown
 ): ApiResponse<never> {
-  console.error(`API Error (${status}): ${message}`, details || "");
+  logger.error(message, { status, details });
   return NextResponse.json(
     { success: false, error: { message, details }, data: null },
     { status }
@@ -77,8 +80,7 @@ export function serverError(
   err: unknown,
   context: string = "An unexpected error occurred"
 ): ApiResponse<never> {
-  // Log the actual error for debugging
-  console.error(`[Server Error] Context: ${context}`, err);
+  logger.error(context, { error: err });
   return error("Internal Server Error", 500);
 }
 
