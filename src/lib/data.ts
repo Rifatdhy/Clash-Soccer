@@ -7,9 +7,9 @@
  * changes immediately.
  */
 
-import { query } from "./db";
-import { groupAlbumItems } from "./albums";
-import { DEFAULT_SETTINGS } from "./defaults";
+import { query } from "./db.ts";
+import { groupAlbumItems } from "./albums.ts";
+import { DEFAULT_SETTINGS } from "./defaults.ts";
 import type {
   Album,
   AlbumItemRow,

@@ -1,6 +1,7 @@
-import { Pool, PoolClient, QueryResultRow } from "pg";
+import { Pool } from "pg";
+import type { PoolClient, QueryResultRow } from "pg";
 import fs from "fs";
-import { assertEnv } from "./env";
+import { assertEnv } from "./env.ts";
 
 const isProduction = process.env.NODE_ENV === "production";
 
