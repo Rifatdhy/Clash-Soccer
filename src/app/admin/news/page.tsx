@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Edit3, Trash2, X, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 import Card from "@/components/card";
@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/format";
 import type { NewsItem } from "@/types";
 import { getNews, createNews, updateNews, deleteNews } from "@/lib/news-store";
 import { compressImageFile } from "@/lib/image-compress";
+import Modal from "@/components/ui/modal";
 
 export default function AdminNews() {
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
@@ -187,24 +188,14 @@ export default function AdminNews() {
         </div>
       </Card>
 
-      <AnimatePresence>
-        {modalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-charcoal/80 flex items-center justify-center p-4"
-            onClick={() => setModalOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        labelledBy="news-modal-title"
+        className="max-w-lg max-h-[90vh] overflow-y-auto p-6"
+      >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-primary-text">
+                <h2 id="news-modal-title" className="text-lg font-bold text-primary-text">
                   {editing ? "Edit News" : "Add News"}
                 </h2>
                 <button onClick={() => setModalOpen(false)} aria-label="Tutup form berita" className="text-secondary-text hover:text-accent">
@@ -358,10 +349,7 @@ export default function AdminNews() {
                   {editing ? "Update" : "Publish"}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </Modal>
     </div>
   );
 }

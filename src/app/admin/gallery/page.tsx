@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Trash2, X, Video, ExternalLink, Upload } from "lucide-react";
 import Card from "@/components/card";
 import { type Album } from "@/types";
 import { getAlbums, createAlbum, deleteAlbum, updateAlbum, addItem, deleteItem } from "@/lib/album-store";
 import { compressImageFile } from "@/lib/image-compress";
 import DatePicker from "@/components/date-picker";
+import Modal from "@/components/ui/modal";
 
 export default function AdminGallery() {
   const [albumList, setAlbumList] = useState<Album[]>([]);
@@ -211,24 +212,14 @@ export default function AdminGallery() {
       </div>
       )}
 
-      <AnimatePresence>
-        {showCreate && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-charcoal/80 flex items-center justify-center p-4"
-            onClick={() => setShowCreate(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border w-full max-w-md p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        labelledBy="album-modal-title"
+        className="max-w-md p-6"
+      >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-primary-text">Create Album</h2>
+                <h2 id="album-modal-title" className="text-lg font-bold text-primary-text">Create Album</h2>
                 <button onClick={() => setShowCreate(false)} aria-label="Tutup form album" className="text-secondary-text hover:text-accent">
                   <X size={20} />
                 </button>
@@ -349,29 +340,17 @@ export default function AdminGallery() {
                   Create Album
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </Modal>
 
-      <AnimatePresence>
-        {managingAlbum && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-charcoal/80 flex items-center justify-center p-4"
-            onClick={() => setManagingId(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
+      {managingAlbum && (
+      <Modal
+        open
+        onClose={() => setManagingId(null)}
+        labelledBy="manage-album-title"
+        className="max-w-3xl p-6 max-h-[90vh] overflow-y-auto"
+      >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-primary-text">{managingAlbum.title}</h2>
+                <h2 id="manage-album-title" className="text-lg font-bold text-primary-text">{managingAlbum?.title}</h2>
                 <button onClick={() => setManagingId(null)} aria-label="Tutup kelola album" className="text-secondary-text hover:text-accent">
                   <X size={20} />
                 </button>
@@ -486,10 +465,8 @@ export default function AdminGallery() {
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </Modal>
+      )}
     </div>
   );
 }

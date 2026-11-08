@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Edit3, Trash2, X } from "lucide-react";
 import Card from "@/components/card";
 import Badge from "@/components/badge";
 import { formatDate, formatTime } from "@/lib/format";
 import type { Match } from "@/types";
 import { getMatches, createMatch, updateMatch, deleteMatch } from "@/lib/match-store";
+import Modal from "@/components/ui/modal";
 
 export default function AdminMatches() {
   const [matchList, setMatchList] = useState<Match[]>([]);
@@ -177,25 +178,14 @@ export default function AdminMatches() {
         </div>
       </Card>
 
-      <AnimatePresence>
-        {modalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-charcoal/80 flex items-center justify-center p-4"
-            onClick={() => setModalOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-surface border border-border w-full max-w-md p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        labelledBy="match-modal-title"
+        className="max-w-md p-6"
+      >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-primary-text">
+                <h2 id="match-modal-title" className="text-lg font-bold text-primary-text">
                   {editing ? "Edit Match" : "Add Match"}
                 </h2>
                 <button onClick={() => setModalOpen(false)} aria-label="Tutup form match" className="text-secondary-text hover:text-accent">
@@ -338,10 +328,7 @@ export default function AdminMatches() {
                   {editing ? "Update Match" : "Create Match"}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </Modal>
     </div>
   );
 }
