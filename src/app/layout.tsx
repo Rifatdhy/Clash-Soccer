@@ -37,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable}`}>
+    <html lang="id" className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable}`}>
       <body className="bg-charcoal text-primary-text font-sans antialiased min-h-screen flex flex-col">
         <LayoutContent>{children}</LayoutContent>
       </body>

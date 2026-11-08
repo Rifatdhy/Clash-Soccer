@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 interface DatePickerProps {
   value: string;
   onChange: (value: string) => void;
+  ariaLabel?: string;
 }
 
 const months = [
@@ -24,7 +25,7 @@ function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
-export default function DatePicker({ value, onChange }: DatePickerProps) {
+export default function DatePicker({ value, onChange, ariaLabel }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -86,6 +87,15 @@ export default function DatePicker({ value, onChange }: DatePickerProps) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={
+          ariaLabel
+            ? `${ariaLabel}${value ? `: ${displayValue}` : ""}`
+            : value
+            ? `Tanggal dipilih: ${displayValue}`
+            : "Pilih tanggal"
+        }
         className="w-full flex items-center gap-3 bg-elevated border border-border px-4 py-3 text-sm text-left text-primary-text focus:outline-none focus:border-accent transition-colors"
       >
         <CalendarDays size={16} className="text-secondary-text shrink-0" />
@@ -108,6 +118,7 @@ export default function DatePicker({ value, onChange }: DatePickerProps) {
                 <button
                   type="button"
                   onClick={prevMonth}
+                  aria-label="Bulan sebelumnya"
                   className="p-1 text-secondary-text hover:text-primary-text transition-colors"
                 >
                   <ChevronLeft size={18} />
@@ -118,6 +129,7 @@ export default function DatePicker({ value, onChange }: DatePickerProps) {
                 <button
                   type="button"
                   onClick={nextMonth}
+                  aria-label="Bulan berikutnya"
                   className="p-1 text-secondary-text hover:text-primary-text transition-colors"
                 >
                   <ChevronRight size={18} />
@@ -144,6 +156,8 @@ export default function DatePicker({ value, onChange }: DatePickerProps) {
                       key={day}
                       type="button"
                       onClick={() => selectDay(day)}
+                      aria-label={`${day} ${months[viewMonth]} ${viewYear}`}
+                      aria-pressed={selected}
                       className={`
                         aspect-square flex items-center justify-center text-sm rounded-sm transition-colors
                         ${selected

@@ -1,20 +1,19 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import type { Metadata } from "next";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import NewsCard from "@/components/news-card";
-import { getNews } from "@/lib/news-store";
-import { type NewsItem } from "@/types";
+import { EmptyState } from "@/components/content-state";
+import { fetchNews } from "@/lib/data";
 
-export default function NewsPage() {
-  const [news, setNews] = useState<NewsItem[] | null>(null);
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    getNews().then(setNews);
-  }, []);
+export const metadata: Metadata = {
+  title: "News — Clash.Soccer",
+  description: "Berita, pengumuman, dan informasi terbaru dari komunitas Clash.Soccer.",
+};
 
-  if (!news) return null;
+export default async function NewsPage() {
+  const news = await fetchNews();
 
   return (
     <>
@@ -25,9 +24,14 @@ export default function NewsPage() {
 
       <Section>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {news.map((item, i) => (
-            <NewsCard key={item.id} item={item} index={i} />
-          ))}
+          {news.length === 0 ? (
+            <EmptyState
+              title="Belum ada berita"
+              description="Berita dan pengumuman akan muncul di sini."
+            />
+          ) : (
+            news.map((item, i) => <NewsCard key={item.id} item={item} index={i} />)
+          )}
         </div>
       </Section>
     </>
