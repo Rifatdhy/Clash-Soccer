@@ -1,46 +1,192 @@
 # ⚽ Clash.Soccer
 
-Website komunitas mini soccer — jadwal pertandingan, RSVP, berita, galeri, dan FAQ.
-
-Dibangun dengan **Next.js 16** + **PostgreSQL**.
+Website komunitas mini soccer: jadwal pertandingan, RSVP, berita, galeri, dan FAQ.
+Dibangun dengan **Next.js 16** (App Router, React 19) dan **PostgreSQL**.
 
 ## Fitur
 
-- **Public**: Homepage, Schedule (detail + RSVP), News, Gallery, FAQ, About, Contact
-- **Admin** (login): Dashboard, kelola Match, RSVP, Gallery (album + item), News, Settings (kontak, FAQ, logo/banner)
-- Autentikasi admin: JWT (httpOnly cookie), proteksi route `/admin` via proxy
-- API: validasi Zod, parameterized query (anti SQL-injection), envelope `{ success, data, error }`
+- **Publik:** homepage, schedule (detail + RSVP), news, gallery, FAQ, about, contact.
+  Semua halaman dirender di server (`force-dynamic`), jadi konten sudah ada di HTML
+  pertama dan tetap benar saat JavaScript belum jalan.
+- **Admin** (`/admin`, login): dashboard, match, RSVP, gallery (album + item),
+  news, dan settings (kontak, FAQ, logo/banner).
+- **API:** validasi Zod, query parameterized, envelope `{ success, data, error }`,
+  dan penulisan multi-row di dalam transaksi.
+- **Keamanan:** JWT httpOnly, CSP nonce, rate limiting, password scrypt,
+  validasi upload, dan header keamanan di `next.config.ts` + `src/proxy.ts`.
+- **Operasional:** migrasi berversi, smoke test database, integration test,
+  E2E Playwright, CI GitHub Actions, dan log JSON terstruktur.
 
-## Persiapan
+## Stack
 
-Prasyarat: Node.js 20+, PostgreSQL 15+.
+| Bagian | Teknologi |
+| --- | --- |
+| Framework | Next.js 16, React 19, TypeScript |
+| Styling | Tailwind CSS 4, framer-motion, lucide-react |
+| Database | PostgreSQL 15+, driver `pg` |
+| Validasi | Zod |
+| Auth | `jose` (JWT, cookie httpOnly) |
+| Test | Node `node --test`, Playwright (devDependency) |
+
+## Prasyarat
+
+- Node.js 24 (dipakai CI; Node 20.9+ umumnya cukup)
+- PostgreSQL 15+
+- Docker (opsional, untuk Postgres lokal lewat `docker-compose.yml`)
+
+## Setup Lokal
 
 ```bash
 npm install
-cp .env.example .env.local   # lalu isi variabelnya
-npm run db:init              # buat skema database
-npm run dev                  # http://localhost:3000
+cp .env.example .env.local
+# edit .env.local, minimal DATABASE_URL, ADMIN_USERNAME, ADMIN_AUTH_SECRET,
+# dan salah satu ADMIN_PASSWORD / ADMIN_PASSWORD_HASH
+
+# Opsional: jalankan Postgres lewat Docker
+docker compose up -d
+
+npm run db:migrate
+npm run dev            # http://localhost:3000
 ```
 
-Lihat [CARA_RUN_PROJECT.md](./CARA_RUN_PROJECT.md) untuk panduan lengkap (setup lokal, deploy Vercel/VPS, troubleshooting).
+Buat hash password admin (disarankan, menggantikan plaintext):
 
-## Env Variables
+```bash
+npm run hash-password -- "password-kuat"
+# tempel hasilnya ke ADMIN_PASSWORD_HASH di .env.local, lalu kosongkan ADMIN_PASSWORD
+```
 
-| Variabel | Keterangan |
-|----------|-----------|
-| `DATABASE_URL` | Connection string PostgreSQL |
-| `ADMIN_USERNAME` | Username admin |
-| `ADMIN_PASSWORD` | Password admin |
-| `ADMIN_AUTH_SECRET` | Secret untuk JWT (acak, panjang) |
-| `PG_REJECT_UNAUTHORIZED` | (opsional) `false` untuk self-signed cert |
-| `PG_CA_CERT` | (opsional) path ke CA cert |
+Panduan langkah demi langkah yang lebih lama tersedia di
+[CARA_RUN_PROJECT.md](./CARA_RUN_PROJECT.md); README ini adalah acuan utama
+untuk env dan script terbaru.
+
+## Environment
+
+| Variabel | Wajib di produksi | Keterangan |
+| --- | --- | --- |
+| `DATABASE_URL` | Ya | Connection string PostgreSQL. Tambahkan `?sslmode=disable` untuk Postgres lokal tanpa TLS. |
+| `ADMIN_USERNAME` | Ya | Username admin. |
+| `ADMIN_PASSWORD_HASH` | Salah satu | Hash scrypt dari `npm run hash-password -- "..."`. |
+| `ADMIN_PASSWORD` | Salah satu | Fallback plaintext; hanya dipakai bila hash kosong. |
+| `ADMIN_AUTH_SECRET` | Ya | Minimal 32 karakter acak untuk menandatangani JWT. |
+| `SITE_URL` | Ya | URL absolut situs, dipakai metadata, sitemap, robots, dan JSON-LD. |
+| `TEST_DATABASE_URL` | Tidak | Database untuk `npm run test:integration`; test di-skip bila kosong. |
+| `RATE_LIMIT_STORE` | Tidak | `memory` (default) atau `database` untuk banyak instance. |
+| `STORAGE_DRIVER` | Tidak | `local` (default) atau `s3`. |
+| `UPLOAD_DIR` | Tidak | Folder upload lokal; default `.data/uploads`. |
+| `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Jika `STORAGE_DRIVER=s3` | Kredensial S3-compatible. |
+| `S3_ENDPOINT` | Tidak | Endpoint kustom (mis. MinIO/R2/S3-compatible). |
+| `S3_PUBLIC_BASE_URL` | Tidak | Base URL publik/CDN untuk file yang diunggah. |
+| `PG_REJECT_UNAUTHORIZED`, `PG_CA_CERT` | Tidak | Pengaturan TLS untuk Postgres. |
+| `SENTRY_DSN` | Tidak | Bila diisi, error dikirim best-effort ke Sentry. |
+
+`npm run dev` dan `npm run build` tidak memerlukan database. Validasi env
+berjalan saat runtime: di produksi env yang tidak lengkap menghentikan proses
+dengan pesan yang menyebut nama variabel, bukan nilainya. Cek status runtime
+lewat `GET /api/health` (200 sehat, 503 bila database atau config bermasalah).
 
 ## Scripts
 
 | Script | Fungsi |
-|--------|--------|
-| `npm run dev` | Development server |
-| `npm run build` | Build production |
-| `npm start` | Jalankan hasil build |
-| `npm run lint` | ESLint |
-| `npm run db:init` | Inisialisasi skema database |
+| --- | --- |
+| `npm run dev` | Development server. |
+| `npm run build` | Build produksi. |
+| `npm start` | Jalankan hasil build. |
+| `npm run lint` | ESLint. |
+| `npm run test` | Unit test logika murni (`node --test`). |
+| `npm run test:integration` | Integration test; butuh `TEST_DATABASE_URL`. |
+| `npm run test:e2e` | E2E Playwright (Chromium); menjalankan dev server otomatis. |
+| `npm run db:migrate` | Jalankan migrasi yang belum diterapkan. |
+| `npm run db:migrate -- --dry-run` | Tampilkan migrasi yang akan jalan. |
+| `npm run db:migrate -- --status` | Tampilkan versi yang sudah diterapkan. |
+| `npm run db:init` | Alias lama untuk `db:migrate`. |
+| `npm run smoke:db` | Smoke test end-to-end RSVP ke database (exit 2 bila `DATABASE_URL` kosong). |
+| `npm run hash-password -- "..."` | Cetak `ADMIN_PASSWORD_HASH`. |
+| `npx tsc --noEmit` | Type check. |
+
+## Database dan Migrasi
+
+File migrasi ada di `migrations/` dengan format `NNNN_nama.sql`, dijalankan
+berurutan dan dicatat di tabel `schema_migrations` (masing-masing dalam
+transaksi). Menambah perubahan skema berarti menambah file baru, bukan
+mengubah file lama.
+
+`migrations/0001_init.sql` berisi skema awal; `migrations/0002_indexes.sql`
+menambahkan indeks dan tabel `rate_limits`. `scripts/migrate.mjs` juga membaca
+`.env.local`/`.env` agar bisa dijalankan tanpa shell khusus.
+
+## Testing
+
+```bash
+npm test                  # unit, tanpa database
+npm run lint
+npx tsc --noEmit
+npm run build
+
+# Integration (butuh database terpisah/nyata)
+$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/clash_soccer"
+npm run test:integration
+
+# E2E
+npx playwright install chromium   # sekali saja
+npm run test:e2e
+
+# Smoke database (menjalankan migrasi lalu skenario RSVP)
+npm run smoke:db
+```
+
+Integration test di-skip dengan pesan jelas bila `TEST_DATABASE_URL` kosong.
+E2E memakai kredensial admin uji dari `playwright.config.ts`; jangan pakai
+kredensial produksi.
+
+## Arsitektur Singkat
+
+- `src/app/**` berisi route App Router, termasuk route API di `src/app/api/**`.
+- `src/lib/data.ts` adalah pintu baca server untuk halaman publik, dengan cache
+  pendek yang diinvalidasi setiap kali ada mutasi.
+- `src/lib/rsvp-service.ts` memegang transaksi RSVP; route hanya memvalidasi
+  input dan memetakan hasil.
+- `src/lib/rate-limit.ts` memilih store `memory` atau `database` lewat
+  `RATE_LIMIT_STORE`. Kegagalan store bersama jatuh ke fallback in-memory agar
+  API tidak ikut mati.
+- `src/lib/storage.ts` memilih driver `local` atau `s3`; SigV4 ditandatangani
+  dengan `node:crypto` tanpa SDK.
+- `src/proxy.ts` melindungi `/admin` sekaligus membuat CSP nonce per request.
+- `src/lib/logger.ts` menulis log JSON dengan redaksi rahasia dan menjadi titik
+  integrasi Sentry.
+
+## Keamanan
+
+- Password admin disimpan sebagai hash scrypt (`scrypt$salt$hash`); plaintext
+  lama masih diterima sampai hash dipasang.
+- Semua route admin dilindungi JWT httpOnly dan dicek ulang di proxy.
+- CSP memakai nonce per request; `script-src` produksi tidak memakai
+  `unsafe-inline`.
+- Upload dibatasi 5 MB, allowlist MIME gambar, nama file acak, dan guard path
+  traversal.
+- Rate limit login 5 percobaan/15 menit dan RSVP 20/15 menit per IP.
+- Rahasia (`password`, `token`, `authorization`, `cookie`, `secret`) diredaksi
+  dari log.
+
+## Deployment
+
+1. Set env produksi (lihat tabel di atas); `SITE_URL` harus URL final.
+2. Jalankan `npm run db:migrate` terhadap database produksi.
+3. `npm run build` lalu `npm start` (atau platform Next.js pilihan Anda).
+4. Pilih `RATE_LIMIT_STORE=database` bila ada lebih dari satu instance.
+5. Pilih `STORAGE_DRIVER=s3` bila filesystem tidak persisten (serverless).
+6. Arahkan health check ke `GET /api/health`.
+
+Saat ini proyek belum di-deploy oleh agent; semua pemeriksaan dijalankan lokal.
+
+## Troubleshooting
+
+| Gejala | Penyebab dan solusi |
+| --- | --- |
+| `Missing admin credentials` saat login | Isi `ADMIN_USERNAME` dan salah satu `ADMIN_PASSWORD_HASH`/`ADMIN_PASSWORD`. |
+| Build produksi berhenti dengan `Invalid environment configuration` | Lengkapi env wajib produksi; pesan menyebut nama variabel. |
+| `/api/health` 503 | Cek `DATABASE_URL` dan migrasi; field `issues` menyebut config yang kurang. |
+| Integration test skipped | Set `TEST_DATABASE_URL` ke database yang boleh dihapus datanya. |
+| Playwright: browser belum ada | Jalankan `npx playwright install chromium`. |
+| Upload gagal di serverless | Pakai `STORAGE_DRIVER=s3`; filesystem lokal read-only/tidak persisten. |
+| File upload 404 di lokal | Pastikan `UPLOAD_DIR` dapat ditulis dan file ada di folder tersebut. |

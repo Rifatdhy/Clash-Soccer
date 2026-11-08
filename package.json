@@ -12,7 +12,8 @@
     "db:init": "node scripts/init-db.mjs",
     "db:migrate": "node scripts/migrate.mjs",
     "smoke:db": "node scripts/smoke-db.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "hash-password": "node scripts/hash-password.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
