@@ -25,37 +25,8 @@ async function apiRequest<T>(
   return result.data as T;
 }
 
-export async function getRsvpByMatch(matchId: string): Promise<RsvpEntry[]> {
-  try {
-    return await apiRequest("GET", undefined, `?matchId=${matchId}`);
-  } catch (error) {
-    console.error(`Failed to get RSVPs for match ${matchId}:`, error);
-    return [];
-  }
-}
-
-export async function getAllRsvp(): Promise<RsvpEntry[]> {
-  try {
-    return await apiRequest("GET");
-  } catch (error) {
-    console.error("Failed to get all RSVPs:", error);
-    return [];
-  }
-}
-
-// Alias for getAllRsvp
-export async function getRsvps(): Promise<RsvpEntry[]> {
-  return getAllRsvp();
-}
-
-export async function getParticipantCountByMatch(matchId: string): Promise<number> {
-  try {
-    const rsvps = await getRsvpByMatch(matchId);
-    return rsvps.reduce((sum, r) => sum + r.participants.length, 0);
-  } catch (error) {
-    console.error(`Failed to get participant count for match ${matchId}:`, error);
-    return 0;
-  }
+export function getAllRsvp(): Promise<RsvpEntry[]> {
+  return apiRequest("GET");
 }
 
 export async function addRsvp(matchId: string, participants: Participant[]): Promise<RsvpEntry> {

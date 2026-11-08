@@ -4,27 +4,31 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getSettings } from "@/lib/settings-store";
+import { DEFAULT_SETTINGS } from "@/lib/defaults";
 import type { Setting } from "@/types";
 import { MessageCircle } from "lucide-react";
-
-function InstagramIcon({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-    </svg>
-  );
-}
+import { InstagramIcon } from "@/components/icons";
 
 export default function Footer() {
-  const [settings, setSettings] = useState<Setting | null>(null);
+  // Brand defaults keep the footer usable while settings load and when the
+  // request fails; the API is the source of truth once it answers.
+  const [settings, setSettings] = useState<Setting>(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    getSettings().then(setSettings);
-  }, []);
+    let active = true;
 
-  if (!settings) return null;
+    getSettings()
+      .then((value) => {
+        if (active) setSettings(value);
+      })
+      .catch((error) => {
+        console.error("Failed to load footer settings:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <footer className="border-t border-border bg-charcoal">
@@ -32,12 +36,12 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
             <Link href="/" className="flex items-center gap-2 md:gap-3">
-              <Image 
-                src="/logo.png" 
-                alt="Clash Soccer Logo" 
-                width={1024} 
-                height={1536} 
-                className="h-7 w-auto md:h-8 object-contain" 
+              <Image
+                src="/logo.png"
+                alt="Clash Soccer Logo"
+                width={1024}
+                height={1536}
+                className="h-7 w-auto md:h-8 object-contain"
               />
               <span className="text-lg md:text-xl font-bold tracking-tight text-primary-text font-display">
                 CLASH.<span className="text-secondary-text">SOCCER</span>
@@ -70,24 +74,28 @@ export default function Footer() {
               Connect
             </h4>
             <div className="flex flex-col gap-3">
-              <a
-                href={`https://wa.me/${settings.whatsapp}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-secondary-text hover:text-primary-text transition-colors"
-              >
-                <MessageCircle size={16} />
-                WhatsApp
-              </a>
-              <a
-                href={`https://instagram.com/${settings.instagram}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-secondary-text hover:text-primary-text transition-colors"
-              >
-                <InstagramIcon size={16} />
-                Instagram
-              </a>
+              {settings.whatsapp && (
+                <a
+                  href={`https://wa.me/${settings.whatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-secondary-text hover:text-primary-text transition-colors"
+                >
+                  <MessageCircle size={16} />
+                  WhatsApp
+                </a>
+              )}
+              {settings.instagram && (
+                <a
+                  href={`https://instagram.com/${settings.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-secondary-text hover:text-primary-text transition-colors"
+                >
+                  <InstagramIcon size={16} />
+                  Instagram
+                </a>
+              )}
             </div>
           </div>
         </div>

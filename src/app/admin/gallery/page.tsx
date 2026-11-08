@@ -2,12 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Trash2, X, Video, ExternalLink, Upload } from "lucide-react";
 import Card from "@/components/card";
 import { type Album } from "@/types";
 import { getAlbums, createAlbum, deleteAlbum, updateAlbum, addItem, deleteItem } from "@/lib/album-store";
+import { uploadImageFile } from "@/lib/upload-image";
 import DatePicker from "@/components/date-picker";
+import Modal from "@/components/ui/modal";
 
 export default function AdminGallery() {
   const [albumList, setAlbumList] = useState<Album[]>([]);
@@ -15,64 +17,112 @@ export default function AdminGallery() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: "", matchDate: "", coverUrl: "", gdriveLink: "" });
   const [managingId, setManagingId] = useState<string | null>(null);
+  const [manageDraft, setManageDraft] = useState({ coverUrl: "", gdriveLink: "" });
   const [itemForm, setItemForm] = useState({ type: "image" as "image" | "video", url: "" });
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    getAlbums().then((albums) => {
-      setAlbumList(albums);
-      setLoading(false);
-    });
+    getAlbums()
+      .then(setAlbumList)
+      .catch((err) => {
+        console.error("Failed to load albums:", err);
+        setError("Gagal memuat album.");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const managingAlbum = managingId ? albumList.find((a) => a.id === managingId) ?? null : null;
 
-  const handleCoverFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const openManage = (album: Album) => {
+    setManageDraft({
+      coverUrl: album.coverUrl,
+      gdriveLink: album.gdriveLink ?? "",
+    });
+    setManagingId(album.id);
+  };
+
+  const handleCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setForm({ ...form, coverUrl: reader.result as string });
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImageFile(file);
+      setForm((current) => ({ ...current, coverUrl: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memproses gambar.");
+    }
   };
 
   const handleCreate = async () => {
     if (!form.title || !form.matchDate) return;
-    const newAlbum: Album = {
-      id: `a${Date.now()}`,
-      title: form.title,
-      matchDate: form.matchDate,
-      coverUrl: form.coverUrl,
-      gdriveLink: form.gdriveLink || undefined,
-      items: [],
-    };
-    setAlbumList(await createAlbum(newAlbum));
-    setShowCreate(false);
-    setForm({ title: "", matchDate: "", coverUrl: "", gdriveLink: "" });
+    setError(null);
+    try {
+      setAlbumList(
+        await createAlbum({
+          id: `a${Date.now()}`,
+          title: form.title,
+          matchDate: form.matchDate,
+          coverUrl: form.coverUrl,
+          gdriveLink: form.gdriveLink || undefined,
+        })
+      );
+      setShowCreate(false);
+      setForm({ title: "", matchDate: "", coverUrl: "", gdriveLink: "" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal membuat album.");
+    }
   };
 
   const handleDelete = async (id: string) => {
-    if (managingId === id) setManagingId(null);
-    setAlbumList(await deleteAlbum(id));
+    if (!window.confirm("Yakin ingin menghapus album ini beserta isinya?")) return;
+    setError(null);
+    try {
+      setAlbumList(await deleteAlbum(id));
+      if (managingId === id) setManagingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menghapus album.");
+    }
   };
 
-  const handleUpdateField = async (albumId: string, field: string, value: string) => {
-    setAlbumList(await updateAlbum(albumId, { [field]: value }));
+  const handleUpdateField = async (
+    album: Album,
+    field: "coverUrl" | "gdriveLink",
+    value: string
+  ) => {
+    if ((album[field] ?? "") === value) return;
+    setError(null);
+    try {
+      setAlbumList(await updateAlbum(album.id, { [field]: value }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menyimpan album.");
+    }
   };
 
   const handleAddItem = async (albumId: string) => {
-    if (!itemForm.url) return;
-    const newItem = { type: itemForm.type as "image" | "video", url: itemForm.url };
-    const updatedAlbum = await addItem(albumId, newItem);
-    setAlbumList(prev => prev.map(a => a.id === albumId ? updatedAlbum : a));
-    setItemForm({ type: "image", url: "" });
+    if (!itemForm.url.trim()) return;
+    setError(null);
+    try {
+      const updatedAlbum = await addItem(albumId, {
+        type: itemForm.type,
+        url: itemForm.url.trim(),
+      });
+      setAlbumList((prev) => prev.map((a) => (a.id === albumId ? updatedAlbum : a)));
+      setItemForm({ type: "image", url: "" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menambah item.");
+    }
   };
 
-  const handleDeleteItem = async (albumId: string, itemId: string) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
-      const updatedAlbum = await deleteItem(albumId, itemId);
-      setAlbumList(prev => prev.map(a => a.id === albumId ? updatedAlbum : a));
+  const handleDeleteItem = async (itemId: string) => {
+    if (!window.confirm("Yakin ingin menghapus item ini?")) return;
+    setError(null);
+    try {
+      const updatedAlbum = await deleteItem(itemId);
+      setAlbumList((prev) =>
+        prev.map((a) => (a.id === updatedAlbum.id ? updatedAlbum : a))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menghapus item.");
     }
   };
 
@@ -96,6 +146,12 @@ export default function AdminGallery() {
         </button>
       </div>
 
+      {error && (
+        <div role="alert" className="mb-6 p-4 border border-red-500/20 bg-red-500/10 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
       {albumList.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-secondary-text">Belum ada album. Buat album pertama!</p>
@@ -109,10 +165,22 @@ export default function AdminGallery() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
           >
-            <div className="cursor-pointer" onClick={() => setManagingId(album.id)}>
+            <div
+              role="button"
+              tabIndex={0}
+              className="cursor-pointer"
+              onClick={() => openManage(album)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openManage(album);
+                }
+              }}
+            >
               <Card className="relative group">
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(album.id); }}
+                  aria-label={`Hapus album ${album.title}`}
                   className="absolute top-3 right-3 z-10 p-1.5 bg-charcoal/80 text-secondary-text hover:text-accent transition-colors opacity-0 group-hover:opacity-100"
                 >
                   <Trash2 size={14} />
@@ -144,34 +212,25 @@ export default function AdminGallery() {
       </div>
       )}
 
-      <AnimatePresence>
-        {showCreate && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-charcoal/80 flex items-center justify-center p-4"
-            onClick={() => setShowCreate(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border w-full max-w-md p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        labelledBy="album-modal-title"
+        className="max-w-md p-6"
+      >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-primary-text">Create Album</h2>
-                <button onClick={() => setShowCreate(false)} className="text-secondary-text hover:text-accent">
+                <h2 id="album-modal-title" className="text-lg font-bold text-primary-text">Create Album</h2>
+                <button onClick={() => setShowCreate(false)} aria-label="Tutup form album" className="text-secondary-text hover:text-accent">
                   <X size={20} />
                 </button>
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="album-title" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Album Title
                   </label>
                   <input
+                    id="album-title"
                     type="text"
                     placeholder="e.g. Clash Weekly #50"
                     value={form.title}
@@ -187,15 +246,24 @@ export default function AdminGallery() {
                   <DatePicker
                     value={form.matchDate}
                     onChange={(v) => setForm({ ...form, matchDate: v })}
+                    ariaLabel="Tanggal pertandingan album"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="album-cover-upload" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Cover Photo
                   </label>
                   <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        fileInputRef.current?.click();
+                      }
+                    }}
                     className="relative border-2 border-dashed border-border hover:border-accent/50 transition-colors cursor-pointer"
                   >
                     {form.coverUrl ? (
@@ -220,6 +288,7 @@ export default function AdminGallery() {
                       </div>
                     )}
                     <input
+                      id="album-cover-upload"
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
@@ -229,6 +298,7 @@ export default function AdminGallery() {
                   </div>
                   <input
                     type="text"
+                    aria-label="URL cover photo"
                     placeholder="Or paste image URL..."
                     value={form.coverUrl}
                     onChange={(e) => setForm({ ...form, coverUrl: e.target.value })}
@@ -237,12 +307,13 @@ export default function AdminGallery() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="album-gdrive" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Google Drive <span className="text-secondary-text/60 font-normal normal-case">(opsional)</span>
                   </label>
                   <div className="relative">
                     <ExternalLink size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-text" />
                     <input
+                      id="album-gdrive"
                       type="url"
                       placeholder="https://drive.google.com/..."
                       value={form.gdriveLink}
@@ -269,48 +340,42 @@ export default function AdminGallery() {
                   Create Album
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </Modal>
 
-      <AnimatePresence>
-        {managingAlbum && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-charcoal/80 flex items-center justify-center p-4"
-            onClick={() => setManagingId(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
+      {managingAlbum && (
+      <Modal
+        open
+        onClose={() => setManagingId(null)}
+        labelledBy="manage-album-title"
+        className="max-w-3xl p-6 max-h-[90vh] overflow-y-auto"
+      >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-primary-text">{managingAlbum.title}</h2>
-                <button onClick={() => setManagingId(null)} className="text-secondary-text hover:text-accent">
+                <h2 id="manage-album-title" className="text-lg font-bold text-primary-text">{managingAlbum?.title}</h2>
+                <button onClick={() => setManagingId(null)} aria-label="Tutup kelola album" className="text-secondary-text hover:text-accent">
                   <X size={20} />
                 </button>
               </div>
 
               <div className="mb-6">
-                <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">Cover Image URL</label>
+                <label htmlFor="manage-cover" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">Cover Image URL</label>
                 <div className="flex gap-3">
                   <input
+                    id="manage-cover"
                     type="text"
-                    value={managingAlbum.coverUrl}
-                    onChange={(e) => handleUpdateField(managingAlbum.id, "coverUrl", e.target.value)}
+                    value={manageDraft.coverUrl}
+                    onChange={(e) =>
+                      setManageDraft((current) => ({ ...current, coverUrl: e.target.value }))
+                    }
+                    onBlur={() =>
+                      handleUpdateField(managingAlbum, "coverUrl", manageDraft.coverUrl)
+                    }
                     placeholder="https://example.com/cover.jpg"
                     className="flex-1 bg-elevated border border-border px-4 py-2.5 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
                   />
-                    {managingAlbum.coverUrl && (
+                    {manageDraft.coverUrl && (
                       <div className="relative w-12 h-12 bg-elevated border border-border overflow-hidden shrink-0">
                         <Image
-                          src={managingAlbum.coverUrl}
+                          src={manageDraft.coverUrl}
                           alt="Cover preview"
                           fill
                           className="object-contain p-1"
@@ -321,13 +386,19 @@ export default function AdminGallery() {
               </div>
 
               <div className="mb-6">
-                <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                <label htmlFor="manage-gdrive" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                   Google Drive Link <span className="text-secondary-text/60 font-normal normal-case">(opsional)</span>
                 </label>
                 <input
+                  id="manage-gdrive"
                   type="url"
-                  value={managingAlbum.gdriveLink || ""}
-                  onChange={(e) => handleUpdateField(managingAlbum.id, "gdriveLink", e.target.value)}
+                  value={manageDraft.gdriveLink}
+                  onChange={(e) =>
+                    setManageDraft((current) => ({ ...current, gdriveLink: e.target.value }))
+                  }
+                  onBlur={() =>
+                    handleUpdateField(managingAlbum, "gdriveLink", manageDraft.gdriveLink)
+                  }
                   placeholder="https://drive.google.com/..."
                   className="w-full bg-elevated border border-border px-4 py-2.5 text-sm text-primary-text placeholder:text-secondary-text focus:outline-none focus:border-accent"
                 />
@@ -351,7 +422,8 @@ export default function AdminGallery() {
                           <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
                         )}
                         <button
-                          onClick={() => handleDeleteItem(managingAlbum.id, item.id)}
+                          onClick={() => handleDeleteItem(item.id)}
+                          aria-label="Hapus item album"
                           className="absolute top-1 right-1 p-1 bg-charcoal/80 text-secondary-text hover:text-accent opacity-0 group-hover/item:opacity-100 transition-opacity"
                         >
                           <Trash2 size={12} />
@@ -368,6 +440,7 @@ export default function AdminGallery() {
                 <label className="block text-xs uppercase tracking-widest text-secondary-text mb-3">Add Item</label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <select
+                    aria-label="Tipe item"
                     value={itemForm.type}
                     onChange={(e) => setItemForm({ ...itemForm, type: e.target.value as "image" | "video" })}
                     className="bg-elevated border border-border px-4 py-2.5 text-sm text-primary-text focus:outline-none focus:border-accent"
@@ -377,6 +450,7 @@ export default function AdminGallery() {
                   </select>
                   <input
                     type="text"
+                    aria-label="URL item album"
                     placeholder="https://example.com/photo.jpg"
                     value={itemForm.url}
                     onChange={(e) => setItemForm({ ...itemForm, url: e.target.value })}
@@ -391,10 +465,8 @@ export default function AdminGallery() {
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </Modal>
+      )}
     </div>
   );
 }

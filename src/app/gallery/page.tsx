@@ -1,20 +1,18 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import type { Metadata } from "next";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import GalleryCard from "@/components/gallery-card";
-import { getAlbums } from "@/lib/album-store";
-import type { Album } from "@/types";
+import { fetchAlbums } from "@/lib/data";
 
-export default function GalleryPage() {
-  const [albums, setAlbums] = useState<Album[] | null>(null);
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    getAlbums().then(setAlbums);
-  }, []);
+export const metadata: Metadata = {
+  title: "Gallery — Clash.Soccer",
+  description: "Dokumentasi setiap momen pertandingan Clash.Soccer.",
+};
 
-  if (!albums) return null;
+export default async function GalleryPage() {
+  const albums = await fetchAlbums();
 
   return (
     <>

@@ -39,6 +39,9 @@ logs/
 .playwright-mcp/
 terminal-security.json
 terminal-tool.json
+/dev-server.log
+/dev-server-error.log
+/playwright-smoke/
 
 # vercel
 .vercel
@@ -46,3 +49,15 @@ terminal-tool.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# superpowers scratch
+/.superpowers/
+
+# local uploads
+/.data/
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

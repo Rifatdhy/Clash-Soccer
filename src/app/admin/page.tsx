@@ -6,7 +6,7 @@ import Card from "@/components/card";
 import { getMatches } from "@/lib/match-store";
 import { getNews } from "@/lib/news-store";
 import { getAlbums } from "@/lib/album-store";
-import { getRsvps } from "@/lib/rsvp-store";
+import { getAllRsvp } from "@/lib/rsvp-store";
 import { Calendar, Users, Newspaper, ImageIcon } from "lucide-react";
 import type { Match, NewsItem, RsvpEntry } from "@/types";
 
@@ -24,7 +24,7 @@ export default function AdminDashboard() {
           getMatches(),
           getNews(),
           getAlbums(),
-          getRsvps(),
+          getAllRsvp(),
         ]);
         setMatches(matchesData);
         setNews(newsData);

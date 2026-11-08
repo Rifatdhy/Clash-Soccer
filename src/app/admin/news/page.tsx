@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Edit3, Trash2, X, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 import Card from "@/components/card";
 import { formatDate } from "@/lib/format";
 import type { NewsItem } from "@/types";
 import { getNews, createNews, updateNews, deleteNews } from "@/lib/news-store";
+import { uploadImageFile } from "@/lib/upload-image";
+import Modal from "@/components/ui/modal";
 
 export default function AdminNews() {
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
@@ -15,6 +17,7 @@ export default function AdminNews() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<NewsItem | null>(null);
   const [form, setForm] = useState({ title: "", slug: "", content: "", excerpt: "", coverImage: "" });
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -25,8 +28,9 @@ export default function AdminNews() {
     try {
       const news = await getNews();
       setNewsList(news);
-    } catch (error) {
-      console.error("Error loading news:", error);
+    } catch (err) {
+      console.error("Error loading news:", err);
+      setError("Gagal memuat daftar berita.");
     } finally {
       setLoading(false);
     }
@@ -50,63 +54,58 @@ export default function AdminNews() {
     setModalOpen(true);
   };
 
-  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('File harus berupa gambar');
-      return;
+
+    setError(null);
+    try {
+      const url = await uploadImageFile(file);
+      setForm((current) => ({ ...current, coverImage: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memproses gambar.");
     }
-    
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file maksimal 5MB');
-      return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = () => {
-      setForm({ ...form, coverImage: reader.result as string });
-    };
-    reader.readAsDataURL(file);
   };
 
   async function handleSave() {
+    setError(null);
+
     // Validation
     if (!form.title.trim()) {
-      alert('Judul harus diisi');
-      return;
-    }
-    if (!form.excerpt.trim()) {
-      alert('Excerpt harus diisi');
+      setError("Judul harus diisi.");
       return;
     }
     if (!form.content.trim()) {
-      alert('Konten harus diisi');
+      setError("Konten harus diisi.");
       return;
     }
-    
-    const slug = form.slug || form.title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+    const slug =
+      form.slug.trim() ||
+      form.title
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-");
+
     try {
       if (editing) {
         await updateNews(editing.id, { ...form, slug });
       } else {
-        const newItem = {
+        await createNews({
           id: `n${Date.now()}`,
           ...form,
           slug,
           coverImage: form.coverImage || "",
           date: new Date().toISOString().split("T")[0],
-        };
-        await createNews(newItem);
+        });
       }
       await loadNews();
       setModalOpen(false);
-    } catch (error) {
-      console.error("Error saving news:", error);
-      alert("Gagal menyimpan news. Silakan coba lagi.");
+    } catch (err) {
+      console.error("Error saving news:", err);
+      setError(err instanceof Error ? err.message : "Gagal menyimpan berita.");
     }
   }
 
@@ -115,9 +114,9 @@ export default function AdminNews() {
     try {
       await deleteNews(id);
       await loadNews();
-    } catch (error) {
-      console.error("Error deleting news:", error);
-      alert("Gagal menghapus news. Silakan coba lagi.");
+    } catch (err) {
+      console.error("Error deleting news:", err);
+      setError("Gagal menghapus berita. Silakan coba lagi.");
     }
   }
 
@@ -140,6 +139,12 @@ export default function AdminNews() {
           <Plus size={16} /> Add News
         </button>
       </div>
+
+      {error && (
+        <div role="alert" className="mb-6 p-4 border border-red-500/20 bg-red-500/10 text-sm text-red-400">
+          {error}
+        </div>
+      )}
 
       <Card hover={false} className="overflow-hidden">
         <div className="overflow-x-auto">
@@ -168,10 +173,10 @@ export default function AdminNews() {
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(item)} className="p-1 text-secondary-text hover:text-accent transition-colors">
+                      <button onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} className="p-1 text-secondary-text hover:text-accent transition-colors">
                         <Edit3 size={14} />
                       </button>
-                      <button onClick={() => handleDelete(item.id)} className="p-1 text-secondary-text hover:text-accent transition-colors">
+                      <button onClick={() => handleDelete(item.id)} aria-label={`Hapus ${item.title}`} className="p-1 text-secondary-text hover:text-accent transition-colors">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -183,37 +188,28 @@ export default function AdminNews() {
         </div>
       </Card>
 
-      <AnimatePresence>
-        {modalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-charcoal/80 flex items-center justify-center p-4"
-            onClick={() => setModalOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        labelledBy="news-modal-title"
+        className="max-w-lg max-h-[90vh] overflow-y-auto p-6"
+      >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-primary-text">
+                <h2 id="news-modal-title" className="text-lg font-bold text-primary-text">
                   {editing ? "Edit News" : "Add News"}
                 </h2>
-                <button onClick={() => setModalOpen(false)} className="text-secondary-text hover:text-accent">
+                <button onClick={() => setModalOpen(false)} aria-label="Tutup form berita" className="text-secondary-text hover:text-accent">
                   <X size={20} />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="news-title" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Judul <span className="text-accent">*</span>
                   </label>
                   <input
+                    id="news-title"
                     type="text"
                     placeholder="e.g. Clash Weekly Edisi #50"
                     value={form.title}
@@ -223,10 +219,11 @@ export default function AdminNews() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="news-slug" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Slug <span className="text-secondary-text/60 font-normal normal-case">(auto-generated dari judul)</span>
                   </label>
                   <input
+                    id="news-slug"
                     type="text"
                     placeholder="clash-weekly-edisi-50"
                     value={form.slug}
@@ -236,11 +233,19 @@ export default function AdminNews() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="news-cover-upload" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Cover Image / Thumbnail
                   </label>
                   <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        fileInputRef.current?.click();
+                      }
+                    }}
                     className="relative border-2 border-dashed border-border hover:border-accent/50 transition-colors cursor-pointer"
                   >
                     {form.coverImage ? (
@@ -261,6 +266,7 @@ export default function AdminNews() {
                             e.stopPropagation();
                             setForm({ ...form, coverImage: "" });
                           }}
+                          aria-label="Hapus cover image"
                           className="absolute top-2 right-2 p-1.5 bg-charcoal/80 text-secondary-text hover:text-accent transition-colors"
                         >
                           <X size={16} />
@@ -271,10 +277,11 @@ export default function AdminNews() {
                         <ImageIcon size={24} className="text-secondary-text" />
                         <span className="text-sm text-secondary-text">Klik untuk upload cover image</span>
                         <span className="text-xs text-secondary-text/50">atau paste URL di bawah</span>
-                        <span className="text-[10px] text-secondary-text/40">Max 5MB • JPG, PNG, GIF</span>
+                        <span className="text-[10px] text-secondary-text/40">Max 10MB • JPG, PNG, GIF</span>
                       </div>
                     )}
                     <input
+                      id="news-cover-upload"
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
@@ -284,6 +291,7 @@ export default function AdminNews() {
                   </div>
                   <input
                     type="url"
+                    aria-label="URL cover image"
                     placeholder="Atau paste URL gambar di sini..."
                     value={form.coverImage}
                     onChange={(e) => setForm({ ...form, coverImage: e.target.value })}
@@ -292,10 +300,11 @@ export default function AdminNews() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
-                    Excerpt / Ringkasan <span className="text-accent">*</span>
+                  <label htmlFor="news-excerpt" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    Excerpt / Ringkasan
                   </label>
                   <textarea
+                    id="news-excerpt"
                     placeholder="Ringkasan singkat artikel (1-2 kalimat)"
                     value={form.excerpt}
                     onChange={(e) => setForm({ ...form, excerpt: e.target.value })}
@@ -308,10 +317,11 @@ export default function AdminNews() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="news-content" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Konten <span className="text-accent">*</span>
                   </label>
                   <textarea
+                    id="news-content"
                     placeholder="Tulis konten artikel lengkap di sini..."
                     value={form.content}
                     onChange={(e) => setForm({ ...form, content: e.target.value })}
@@ -333,16 +343,13 @@ export default function AdminNews() {
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={!form.title || !form.excerpt || !form.content}
+                  disabled={!form.title || !form.content}
                   className="flex-1 py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   {editing ? "Update" : "Publish"}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </Modal>
     </div>
   );
 }

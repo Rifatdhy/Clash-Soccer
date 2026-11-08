@@ -1,76 +1,15 @@
-"use client";
+import type { Metadata } from "next";
+import ContactView from "@/components/views/contact-view";
+import { fetchSettings } from "@/lib/data";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { MessageCircle } from "lucide-react";
+export const dynamic = "force-dynamic";
 
-function InstagramIcon({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-    </svg>
-  );
-}
-import PageHeader from "@/components/page-header";
-import Section from "@/components/section";
-import Card from "@/components/card";
-import { getSettings } from "@/lib/settings-store";
-import type { Setting } from "@/types";
+export const metadata: Metadata = {
+  title: "Contact — Clash.Soccer",
+  description: "Hubungi Clash.Soccer melalui WhatsApp atau Instagram.",
+};
 
-export default function ContactPage() {
-  const [settings, setSettings] = useState<Setting | null>(null);
-
-  useEffect(() => {
-    getSettings().then(setSettings);
-  }, []);
-
-  if (!settings) return null;
-
-  const contactItems = [
-    {
-      icon: MessageCircle,
-      label: "WhatsApp",
-      value: settings.whatsapp,
-      href: `https://wa.me/${settings.whatsapp}`,
-    },
-    {
-      icon: InstagramIcon,
-      label: "Instagram",
-      value: `@${settings.instagram}`,
-      href: `https://instagram.com/${settings.instagram}`,
-    },
-  ];
-  return (
-    <>
-      <PageHeader
-        title="Contact"
-        subtitle="Hubungi Clash.Soccer melalui WhatsApp atau Instagram."
-      />
-
-      <Section>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-          {contactItems.map((item, i) => (
-            <motion.div
-              key={item.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: i * 0.1, ease: [0.32, 0.72, 0, 1] }}
-            >
-              {item.href && (
-                <a href={item.href} target="_blank" rel="noopener noreferrer">
-                  <Card className="h-full text-center group">
-                    <item.icon size={24} className="mx-auto text-secondary-text group-hover:text-accent transition-colors" />
-                    <h3 className="text-sm uppercase tracking-widest text-primary-text mt-4 mb-2">{item.label}</h3>
-                    <p className="text-sm text-secondary-text">{item.value}</p>
-                  </Card>
-                </a>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      </Section>
-    </>
-  );
+export default async function ContactPage() {
+  const settings = await fetchSettings();
+  return <ContactView settings={settings} />;
 }

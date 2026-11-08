@@ -6,6 +6,7 @@ import Card from "./card";
 import { type NewsItem } from "@/types";
 import { formatDate } from "@/lib/format";
 import Image from "next/image";
+import { BrandFallback } from "./content-state";
 
 interface NewsCardProps {
   item: NewsItem;
@@ -32,7 +33,7 @@ export default function NewsCard({ item, index = 0 }: NewsCardProps) {
                 className="object-contain object-center p-3 group-hover:scale-[1.02] transition-transform duration-500"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+              <BrandFallback label="CLASH / NEWS" />
             )}
           </div>
           <p className="text-xs text-secondary-text uppercase tracking-widest mb-2">

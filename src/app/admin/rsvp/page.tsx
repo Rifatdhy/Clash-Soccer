@@ -19,13 +19,18 @@ export default function AdminRSVP() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [rsvps, matchList] = await Promise.all([getAllRsvp(), getMatches()]);
       setAllRsvp(rsvps);
       setMatches(matchList);
+    } catch (err) {
+      console.error("Error loading RSVP data:", err);
+      setError("Gagal memuat data RSVP.");
     } finally {
       setLoading(false);
     }
@@ -90,7 +95,7 @@ export default function AdminRSVP() {
       setAllRsvp((current) => current.filter((item) => item.id !== rsvp.id));
     } catch (error) {
       console.error(error);
-      alert("Gagal menghapus RSVP. Silakan coba lagi.");
+      setError("Gagal menghapus RSVP. Silakan coba lagi.");
     } finally {
       setDeletingId(null);
     }
@@ -118,6 +123,12 @@ export default function AdminRSVP() {
           </button>
         )}
       </div>
+
+      {error && (
+        <div role="alert" className="mb-6 p-4 border border-red-500/20 bg-red-500/10 text-sm text-red-400">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center min-h-[400px]">

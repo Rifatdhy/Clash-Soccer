@@ -28,7 +28,7 @@ interface ApiResponse<T> {
 // --- Request Configuration ---
 interface RequestOptions {
   method: "GET" | "POST" | "PUT" | "DELETE";
-  body?: Record<string, unknown> | unknown[];
+  body?: unknown;
   queryParams?: string;
 }
 
@@ -89,22 +89,3 @@ export const api = {
   delete: <T>(endpoint: string, queryParams?: string) =>
     apiRequest<T>(endpoint, { method: "DELETE", queryParams }),
 };
-
-/**
- * Safe API call with fallback
- * Returns fallback value if request fails
- */
-export async function safeApiCall<T>(
-  apiCall: () => Promise<T>,
-  fallback: T,
-  errorMessage?: string
-): Promise<T> {
-  try {
-    return await apiCall();
-  } catch (error) {
-    if (errorMessage) {
-      console.error(errorMessage, error);
-    }
-    return fallback;
-  }
-}

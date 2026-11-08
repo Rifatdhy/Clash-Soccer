@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Oswald } from "next/font/google";
 import LayoutContent from "@/components/layout-content";
+import { getSiteUrl } from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,6 +20,7 @@ const oswald = Oswald({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: "Clash.Soccer — Less Talk. More Football.",
   description: "Komunitas mini soccer — informasi jadwal, RSVP, galeri, dan berita dalam satu platform modern.",
   icons: {
@@ -37,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable}`}>
+    <html lang="id" className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable}`}>
       <body className="bg-charcoal text-primary-text font-sans antialiased min-h-screen flex flex-col">
         <LayoutContent>{children}</LayoutContent>
       </body>

@@ -7,6 +7,7 @@ import Card from "./card";
 import { type Album } from "@/types";
 import { formatDate } from "@/lib/format";
 import Image from "next/image";
+import { BrandFallback } from "./content-state";
 
 interface GalleryCardProps {
   album: Album;
@@ -30,7 +31,7 @@ export default function GalleryCard({ album, index = 0 }: GalleryCardProps) {
             priority={index < 2}
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-elevated to-border" />
+          <BrandFallback label="CLASH / MATCH DAY" />
         )}
         {videoCount > 0 && (
           <div className="absolute bottom-3 right-3 bg-charcoal/80 px-2 py-1 flex items-center gap-1">

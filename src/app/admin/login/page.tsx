@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import { login, isAuthenticated } from "@/lib/auth-client";
+import { sanitizeNextPath } from "@/lib/validation";
 
 export default function AdminLogin() {
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") || "/admin";
+  // Only same-origin paths are safe redirect targets after login.
+  const nextPath = sanitizeNextPath(searchParams.get("next"), "/admin");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -53,23 +55,45 @@ export default function AdminLogin() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full bg-elevated border border-border px-4 py-3 text-primary-text text-sm placeholder:text-secondary-text focus:outline-none focus:border-accent transition-colors"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-elevated border border-border px-4 py-3 text-primary-text text-sm placeholder:text-secondary-text focus:outline-none focus:border-accent transition-colors"
-          />
+          <div>
+            <label
+              htmlFor="admin-username"
+              className="block text-xs uppercase tracking-widest text-secondary-text mb-2"
+            >
+              Username
+            </label>
+            <input
+              id="admin-username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-elevated border border-border px-4 py-3 text-primary-text text-sm placeholder:text-secondary-text focus:outline-none focus:border-accent transition-colors"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="admin-password"
+              className="block text-xs uppercase tracking-widest text-secondary-text mb-2"
+            >
+              Password
+            </label>
+            <input
+              id="admin-password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-elevated border border-border px-4 py-3 text-primary-text text-sm placeholder:text-secondary-text focus:outline-none focus:border-accent transition-colors"
+            />
+          </div>
 
           {error && (
-            <p className="text-sm text-red-400">{error}</p>
+            <p role="alert" className="text-sm text-red-400">{error}</p>
           )}
 
           <button
