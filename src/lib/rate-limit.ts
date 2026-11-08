@@ -1,13 +1,12 @@
-/**
- * In-memory rate limiting. Kept bounded so spoofed identifiers cannot grow
- * memory without limit. For multi-instance deployments, put the counter in
- * a shared store instead.
- */
+import { query } from "./db.ts";
+import {
+  createMemoryStore,
+  createPostgresStore,
+  type RateLimitOptions,
+  type RateLimitStore,
+} from "./rate-limit-store.ts";
 
-export interface RateLimitOptions {
-  windowMs: number;
-  max: number;
-}
+export type { RateLimitOptions } from "./rate-limit-store.ts";
 
 export const RATE_LIMIT_DEFAULTS: RateLimitOptions = {
   windowMs: 15 * 60 * 1000,
@@ -19,49 +18,49 @@ export const RSVP_RATE_LIMIT: RateLimitOptions = {
   max: 20,
 };
 
-const MAX_BUCKETS = 5000;
+let configuredStore: RateLimitStore = createMemoryStore();
+const fallbackStore = createMemoryStore();
+let databaseStore: RateLimitStore | null = null;
 
-const buckets = new Map<string, { count: number; resetAt: number }>();
-
-function prune(now: number) {
-  if (buckets.size <= MAX_BUCKETS) return;
-
-  for (const [key, bucket] of buckets) {
-    if (bucket.resetAt <= now) buckets.delete(key);
-  }
-
-  while (buckets.size > MAX_BUCKETS) {
-    const oldest = buckets.keys().next();
-    if (oldest.done) break;
-    buckets.delete(oldest.value);
-  }
+export function setRateLimitStore(store: RateLimitStore) {
+  configuredStore = store;
+  databaseStore = null;
 }
 
-export function consume(
+function getStore(): RateLimitStore {
+  if (process.env.RATE_LIMIT_STORE !== "database") {
+    return configuredStore;
+  }
+
+  databaseStore ??= createPostgresStore((text, params) => query(text, params));
+  return databaseStore;
+}
+
+export async function consume(
   scope: string,
   key: string,
   options: RateLimitOptions = RATE_LIMIT_DEFAULTS
-): { allowed: boolean; retryAfterMs: number } {
-  const now = Date.now();
+): Promise<{ allowed: boolean; retryAfterMs: number }> {
   const bucketKey = `${scope}:${key}`;
-  prune(now);
 
-  const bucket = buckets.get(bucketKey);
-  if (!bucket || bucket.resetAt <= now) {
-    buckets.set(bucketKey, { count: 1, resetAt: now + options.windowMs });
-    return { allowed: true, retryAfterMs: 0 };
+  try {
+    return await getStore().consume(bucketKey, options);
+  } catch (error) {
+    // A broken shared store must not take the whole API down. Fall back to
+    // per-instance counters and let the operator investigate the logs.
+    console.error("Rate limit store unavailable; using in-memory fallback", error);
+    return fallbackStore.consume(bucketKey, options);
   }
-
-  bucket.count += 1;
-  if (bucket.count > options.max) {
-    return { allowed: false, retryAfterMs: bucket.resetAt - now };
-  }
-
-  return { allowed: true, retryAfterMs: 0 };
 }
 
-export function resetRateLimit(scope: string, key: string) {
-  buckets.delete(`${scope}:${key}`);
+export async function resetRateLimit(scope: string, key: string) {
+  const bucketKey = `${scope}:${key}`;
+
+  try {
+    await getStore().reset(bucketKey);
+  } catch (error) {
+    console.error("Failed to reset rate limit bucket", error);
+  }
 }
 
 export function getClientIp(req: Request): string {

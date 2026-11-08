@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const limited = consume("rsvp", getClientIp(req), RSVP_RATE_LIMIT);
+  const limited = await consume("rsvp", getClientIp(req), RSVP_RATE_LIMIT);
   if (!limited.allowed) {
     return tooManyRequests("Too many RSVP attempts. Please wait a few minutes.");
   }

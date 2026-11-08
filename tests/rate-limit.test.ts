@@ -5,41 +5,42 @@ import {
   consume,
   getClientIp,
   resetRateLimit,
+  setRateLimitStore,
   RATE_LIMIT_DEFAULTS,
 } from "../src/lib/rate-limit.ts";
 
-test("first attempt is allowed", () => {
-  const result = consume("login", "1.2.3.4", RATE_LIMIT_DEFAULTS);
+test("first attempt is allowed", async () => {
+  const result = await consume("login", "1.2.3.4", RATE_LIMIT_DEFAULTS);
   assert.equal(result.allowed, true);
 });
 
-test("attempts beyond the maximum are blocked", () => {
-  resetRateLimit("login", "9.9.9.9");
+test("attempts beyond the maximum are blocked", async () => {
+  await resetRateLimit("login", "9.9.9.9");
   for (let i = 0; i < RATE_LIMIT_DEFAULTS.max; i += 1) {
-    consume("login", "9.9.9.9", RATE_LIMIT_DEFAULTS);
+    await consume("login", "9.9.9.9", RATE_LIMIT_DEFAULTS);
   }
-  const blocked = consume("login", "9.9.9.9", RATE_LIMIT_DEFAULTS);
+  const blocked = await consume("login", "9.9.9.9", RATE_LIMIT_DEFAULTS);
   assert.equal(blocked.allowed, false);
   assert.ok(blocked.retryAfterMs > 0);
 });
 
-test("scopes do not share counters", () => {
-  resetRateLimit("login", "5.5.5.5");
-  resetRateLimit("rsvp", "5.5.5.5");
+test("scopes do not share counters", async () => {
+  await resetRateLimit("login", "5.5.5.5");
+  await resetRateLimit("rsvp", "5.5.5.5");
   for (let i = 0; i < RATE_LIMIT_DEFAULTS.max; i += 1) {
-    consume("login", "5.5.5.5", RATE_LIMIT_DEFAULTS);
+    await consume("login", "5.5.5.5", RATE_LIMIT_DEFAULTS);
   }
-  assert.equal(consume("login", "5.5.5.5", RATE_LIMIT_DEFAULTS).allowed, false);
-  assert.equal(consume("rsvp", "5.5.5.5", RATE_LIMIT_DEFAULTS).allowed, true);
+  assert.equal((await consume("login", "5.5.5.5", RATE_LIMIT_DEFAULTS)).allowed, false);
+  assert.equal((await consume("rsvp", "5.5.5.5", RATE_LIMIT_DEFAULTS)).allowed, true);
 });
 
-test("reset clears a bucket", () => {
-  resetRateLimit("login", "7.7.7.7");
+test("reset clears a bucket", async () => {
+  await resetRateLimit("login", "7.7.7.7");
   for (let i = 0; i <= RATE_LIMIT_DEFAULTS.max; i += 1) {
-    consume("login", "7.7.7.7", RATE_LIMIT_DEFAULTS);
+    await consume("login", "7.7.7.7", RATE_LIMIT_DEFAULTS);
   }
-  resetRateLimit("login", "7.7.7.7");
-  assert.equal(consume("login", "7.7.7.7", RATE_LIMIT_DEFAULTS).allowed, true);
+  await resetRateLimit("login", "7.7.7.7");
+  assert.equal((await consume("login", "7.7.7.7", RATE_LIMIT_DEFAULTS)).allowed, true);
 });
 
 test("client ip prefers the first forwarded address", () => {
@@ -55,4 +56,31 @@ test("client ip falls back to x-real-ip then unknown", () => {
   });
   assert.equal(getClientIp(realIp), "3.3.3.3");
   assert.equal(getClientIp(new Request("http://localhost/api/login")), "unknown");
+});
+
+test("consume delegates to the configured store", async () => {
+  const calls: Array<{ key: string; max: number }> = [];
+  setRateLimitStore({
+    async consume(key, options) {
+      calls.push({ key, max: options.max });
+      return { allowed: false, retryAfterMs: 1234 };
+    },
+    async reset() {},
+  });
+
+  const result = await consume("login", "1.2.3.4", { windowMs: 1000, max: 2 });
+  assert.deepEqual(result, { allowed: false, retryAfterMs: 1234 });
+  assert.deepEqual(calls, [{ key: "login:1.2.3.4", max: 2 }]);
+});
+
+test("consume falls back to memory when the store throws", async () => {
+  setRateLimitStore({
+    async consume() {
+      throw new Error("store down");
+    },
+    async reset() {},
+  });
+
+  const result = await consume("fallback", "ip", { windowMs: 1000, max: 2 });
+  assert.equal(result.allowed, true);
 });

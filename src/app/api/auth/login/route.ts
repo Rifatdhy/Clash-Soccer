@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   return validate(req, loginSchema, async (data) => {
     try {
       const ip = getClientIp(req);
-      const limited = consume("login", ip);
+      const limited = await consume("login", ip);
       if (!limited.allowed) {
         return tooManyRequests("Too many login attempts. Please try again later.");
       }
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       const isPasswordMatch = verifyPassword(password, adminPassword);
 
       if (isUsernameMatch && isPasswordMatch) {
-        resetRateLimit("login", ip);
+        await resetRateLimit("login", ip);
         const token = await createAdminSessionToken(username);
         const response = success({ message: "Login successful", user: { username } });
 
