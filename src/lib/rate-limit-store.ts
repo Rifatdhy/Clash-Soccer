@@ -78,9 +78,23 @@ const CONSUME_SQL = `
   RETURNING count, reset_at
 `;
 
+const CLEANUP_EVERY = 500;
+
 export function createPostgresStore(query: RateLimitQuery): RateLimitStore {
+  let consumesSinceCleanup = 0;
+
   return {
     async consume(key, options) {
+      consumesSinceCleanup += 1;
+      if (consumesSinceCleanup >= CLEANUP_EVERY) {
+        consumesSinceCleanup = 0;
+        // Expired buckets are dead weight; a bounded sweep keeps the table
+        // from growing forever without a separate cron job.
+        await query(
+          "DELETE FROM rate_limits WHERE reset_at < now() - interval '1 day'"
+        );
+      }
+
       const result = await query(CONSUME_SQL, [key, options.windowMs]);
       const row = result.rows[0];
       if (!row) return { allowed: false, retryAfterMs: options.windowMs };

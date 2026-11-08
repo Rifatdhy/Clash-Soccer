@@ -64,7 +64,13 @@ export async function resetRateLimit(scope: string, key: string) {
 }
 
 export function getClientIp(req: Request): string {
+  // Prefer the header a trusted reverse proxy overwrites. X-Forwarded-For is
+  // client-controlled unless a proxy appends to it, so it is only a fallback.
+  const realIp = req.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
-  return req.headers.get("x-real-ip") || "unknown";
+
+  return "unknown";
 }

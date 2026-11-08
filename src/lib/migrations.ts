@@ -3,12 +3,18 @@ export interface MigrationFile {
   name: string;
 }
 
-const MIGRATION_PATTERN = /^(\d{4})_([A-Za-z0-9_-]+)\.sql$/;
+const MIGRATION_PATTERN = /^(\d+)_([A-Za-z0-9_-]+)\.sql$/;
 
 export function parseMigrationFileName(fileName: string): MigrationFile | null {
   const match = MIGRATION_PATTERN.exec(fileName);
   if (!match) return null;
   return { version: match[1], name: match[2] };
+}
+
+export function invalidMigrationFiles(files: string[]): string[] {
+  return files
+    .filter((file) => file.endsWith(".sql") && parseMigrationFileName(file) === null)
+    .sort();
 }
 
 export function selectPendingMigrations(

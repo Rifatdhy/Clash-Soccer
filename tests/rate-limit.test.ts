@@ -58,6 +58,16 @@ test("client ip falls back to x-real-ip then unknown", () => {
   assert.equal(getClientIp(new Request("http://localhost/api/login")), "unknown");
 });
 
+test("client ip trusts x-real-ip over a spoofable forwarded header", () => {
+  const request = new Request("http://localhost/api/login", {
+    headers: {
+      "x-real-ip": "3.3.3.3",
+      "x-forwarded-for": "1.1.1.1, 3.3.3.3",
+    },
+  });
+  assert.equal(getClientIp(request), "3.3.3.3");
+});
+
 test("consume delegates to the configured store", async () => {
   const calls: Array<{ key: string; max: number }> = [];
   setRateLimitStore({

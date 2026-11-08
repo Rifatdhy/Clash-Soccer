@@ -2,7 +2,10 @@ import { readFileSync, readdirSync, existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
-import { selectPendingMigrations } from "../src/lib/migrations.ts";
+import {
+  invalidMigrationFiles,
+  selectPendingMigrations,
+} from "../src/lib/migrations.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
@@ -49,10 +52,23 @@ const dryRun = process.argv.includes("--dry-run");
 const migrationsDir = join(rootDir, "migrations");
 const files = readdirSync(migrationsDir).filter((file) => file.endsWith(".sql"));
 
+const invalid = invalidMigrationFiles(files);
+if (invalid.length > 0) {
+  console.error(
+    `FATAL: these migration files do not match NNNN_name.sql and would be skipped: ${invalid.join(", ")}`
+  );
+  process.exit(1);
+}
+
+const MIGRATION_LOCK_ID = 4829163;
+
 const client = new pg.Client({ connectionString, ssl });
 await client.connect();
 
 try {
+  // Two instances deploying at once must not apply the same DDL twice.
+  await client.query("SELECT pg_advisory_lock($1)", [MIGRATION_LOCK_ID]);
+
   await client.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version TEXT PRIMARY KEY,
@@ -105,5 +121,6 @@ try {
     console.log(`Applied ${pending.length} migration(s).`);
   }
 } finally {
+  await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK_ID]).catch(() => {});
   await client.end();
 }
