@@ -1,7 +1,12 @@
 import { Pool, PoolClient, QueryResultRow } from "pg";
 import fs from "fs";
+import { assertEnv } from "./env";
 
 const isProduction = process.env.NODE_ENV === "production";
+
+if (process.env.NEXT_PHASE !== "phase-production-build") {
+  assertEnv();
+}
 
 const connectionString =
   process.env.DATABASE_URL ||
