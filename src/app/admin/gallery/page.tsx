@@ -7,7 +7,7 @@ import { Plus, Trash2, X, Video, ExternalLink, Upload } from "lucide-react";
 import Card from "@/components/card";
 import { type Album } from "@/types";
 import { getAlbums, createAlbum, deleteAlbum, updateAlbum, addItem, deleteItem } from "@/lib/album-store";
-import { compressImageFile } from "@/lib/image-compress";
+import { uploadImageFile } from "@/lib/upload-image";
 import DatePicker from "@/components/date-picker";
 import Modal from "@/components/ui/modal";
 
@@ -46,8 +46,8 @@ export default function AdminGallery() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const compressed = await compressImageFile(file);
-      setForm((current) => ({ ...current, coverUrl: compressed }));
+      const url = await uploadImageFile(file);
+      setForm((current) => ({ ...current, coverUrl: url }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memproses gambar.");
     }

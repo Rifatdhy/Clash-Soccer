@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Plus, Trash2 } from "lucide-react";
 import Card from "@/components/card";
 import { getSettings, updateSettings, getFaqs, createFaq, updateFaq as updateFaqStore, deleteFaq } from "@/lib/settings-store";
-import { compressImageFile } from "@/lib/image-compress";
+import { uploadImageFile } from "@/lib/upload-image";
 import type { FaqItem, Setting } from "@/types";
 
 export default function AdminSettings() {
@@ -56,8 +56,8 @@ export default function AdminSettings() {
 
     setError(null);
     try {
-      const compressed = await compressImageFile(file);
-      setSettings((current) => (current ? { ...current, [field]: compressed } : current));
+      const url = await uploadImageFile(file);
+      setSettings((current) => (current ? { ...current, [field]: url } : current));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memproses gambar.");
     }

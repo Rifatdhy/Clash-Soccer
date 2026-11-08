@@ -58,6 +58,12 @@ export function isHttpUrl(value: string): boolean {
 export function isAllowedImageUrl(value: string): boolean {
   const trimmed = value.trim();
   if (trimmed === "") return true;
+
+  if (trimmed.startsWith("/api/uploads/")) {
+    const key = trimmed.slice("/api/uploads/".length);
+    return key.length > 0 && !key.includes("..") && !key.includes("\\");
+  }
+
   if (isDataImageUrl(trimmed)) {
     return trimmed.length <= MAX_IMAGE_DATA_URL_LENGTH;
   }

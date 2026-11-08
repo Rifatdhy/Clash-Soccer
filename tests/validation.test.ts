@@ -28,6 +28,17 @@ test("images from other hosts are rejected", () => {
   assert.equal(isAllowedImageUrl("http://images.unsplash.com/photo-123"), false);
 });
 
+test("locally stored upload URLs are allowed", () => {
+  assert.equal(isAllowedImageUrl("/api/uploads/abc.png"), true);
+});
+
+test("upload paths cannot escape their directory", () => {
+  assert.equal(isAllowedImageUrl("/api/uploads/../secret.png"), false);
+  assert.equal(isAllowedImageUrl("/api/uploads/a/../../secret.png"), false);
+  assert.equal(isAllowedImageUrl("/api/uploads/"), false);
+  assert.equal(isAllowedImageUrl("//evil.example/api/uploads/a.png"), false);
+});
+
 test("uploaded data images are allowed", () => {
   assert.equal(isDataImageUrl("data:image/png;base64,iVBORw0KGgo="), true);
   assert.equal(isAllowedImageUrl("data:image/webp;base64,AAAA"), true);

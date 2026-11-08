@@ -8,7 +8,7 @@ import Card from "@/components/card";
 import { formatDate } from "@/lib/format";
 import type { NewsItem } from "@/types";
 import { getNews, createNews, updateNews, deleteNews } from "@/lib/news-store";
-import { compressImageFile } from "@/lib/image-compress";
+import { uploadImageFile } from "@/lib/upload-image";
 import Modal from "@/components/ui/modal";
 
 export default function AdminNews() {
@@ -60,8 +60,8 @@ export default function AdminNews() {
 
     setError(null);
     try {
-      const compressed = await compressImageFile(file);
-      setForm((current) => ({ ...current, coverImage: compressed }));
+      const url = await uploadImageFile(file);
+      setForm((current) => ({ ...current, coverImage: url }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memproses gambar.");
     }
