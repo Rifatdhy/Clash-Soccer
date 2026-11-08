@@ -10,7 +10,8 @@
     "test": "node --test \"tests/*.test.ts\"",
     "test:integration": "node --test \"tests/integration/*.test.ts\"",
     "db:init": "node scripts/init-db.mjs",
-    "db:migrate": "node scripts/migrate.mjs"
+    "db:migrate": "node scripts/migrate.mjs",
+    "smoke:db": "node scripts/smoke-db.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
