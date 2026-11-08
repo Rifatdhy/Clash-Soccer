@@ -39,6 +39,9 @@ logs/
 .playwright-mcp/
 terminal-security.json
 terminal-tool.json
+/dev-server.log
+/dev-server-error.log
+/playwright-smoke/
 
 # vercel
 .vercel
