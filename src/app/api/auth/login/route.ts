@@ -4,6 +4,7 @@ import { createAdminSessionToken } from "@/lib/admin-auth";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { success, unauthorized, serverError, validate, tooManyRequests } from "@/lib/api-helpers";
 import { consume, getClientIp, resetRateLimit } from "@/lib/rate-limit";
+import { verifyPassword } from "@/lib/password";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
       const { username, password } = data;
 
       const adminUsername = process.env.ADMIN_USERNAME;
-      const adminPassword = process.env.ADMIN_PASSWORD;
+      const adminPassword = process.env.ADMIN_PASSWORD_HASH || process.env.ADMIN_PASSWORD;
 
       if (!adminUsername || !adminPassword) {
         return serverError(
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
       }
 
       const isUsernameMatch = timingSafeEqual(username, adminUsername);
-      const isPasswordMatch = timingSafeEqual(password, adminPassword);
+      const isPasswordMatch = verifyPassword(password, adminPassword);
 
       if (isUsernameMatch && isPasswordMatch) {
         resetRateLimit("login", ip);
