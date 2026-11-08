@@ -1,10 +1,11 @@
 import { hashPassword } from "../src/lib/password.ts";
 
-const password = process.argv[2] ?? process.env.ADMIN_PASSWORD;
+// Prefer the environment so the password does not land in shell history.
+const password = process.env.ADMIN_PASSWORD ?? process.argv[2];
 
 if (!password) {
-  console.error("Usage: node scripts/hash-password.mjs <password>");
-  console.error("   or: ADMIN_PASSWORD=<password> node scripts/hash-password.mjs");
+  console.error("Usage: ADMIN_PASSWORD=<password> node scripts/hash-password.mjs");
+  console.error("   or: node scripts/hash-password.mjs <password> (visible in history)");
   process.exit(1);
 }
 

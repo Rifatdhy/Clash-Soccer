@@ -30,7 +30,7 @@ Dibangun dengan **Next.js 16** (App Router, React 19) dan **PostgreSQL**.
 
 ## Prasyarat
 
-- Node.js 24 (dipakai CI; Node 20.9+ umumnya cukup)
+- Node.js 24 (wajib: script memakai `node --test` dengan file `.ts`)
 - PostgreSQL 15+
 - Docker (opsional, untuk Postgres lokal lewat `docker-compose.yml`)
 
@@ -52,7 +52,7 @@ npm run dev            # http://localhost:3000
 Buat hash password admin (disarankan, menggantikan plaintext):
 
 ```bash
-npm run hash-password -- "password-kuat"
+$env:ADMIN_PASSWORD="password-kuat"; npm run hash-password
 # tempel hasilnya ke ADMIN_PASSWORD_HASH di .env.local, lalu kosongkan ADMIN_PASSWORD
 ```
 
@@ -66,7 +66,7 @@ untuk env dan script terbaru.
 | --- | --- | --- |
 | `DATABASE_URL` | Ya | Connection string PostgreSQL. Tambahkan `?sslmode=disable` untuk Postgres lokal tanpa TLS. |
 | `ADMIN_USERNAME` | Ya | Username admin. |
-| `ADMIN_PASSWORD_HASH` | Salah satu | Hash scrypt dari `npm run hash-password -- "..."`. |
+| `ADMIN_PASSWORD_HASH` | Salah satu | Hash scrypt dari `npm run hash-password` (baca env `ADMIN_PASSWORD`). |
 | `ADMIN_PASSWORD` | Salah satu | Fallback plaintext; hanya dipakai bila hash kosong. |
 | `ADMIN_AUTH_SECRET` | Ya | Minimal 32 karakter acak untuk menandatangani JWT. |
 | `SITE_URL` | Ya | URL absolut situs, dipakai metadata, sitemap, robots, dan JSON-LD. |
@@ -76,7 +76,7 @@ untuk env dan script terbaru.
 | `UPLOAD_DIR` | Tidak | Folder upload lokal; default `.data/uploads`. |
 | `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Jika `STORAGE_DRIVER=s3` | Kredensial S3-compatible. |
 | `S3_ENDPOINT` | Tidak | Endpoint kustom (mis. MinIO/R2/S3-compatible). |
-| `S3_PUBLIC_BASE_URL` | Tidak | Base URL publik/CDN untuk file yang diunggah. |
+
 | `PG_REJECT_UNAUTHORIZED`, `PG_CA_CERT` | Tidak | Pengaturan TLS untuk Postgres. |
 | `SENTRY_DSN` | Tidak | Bila diisi, error dikirim best-effort ke Sentry. |
 
@@ -101,7 +101,7 @@ lewat `GET /api/health` (200 sehat, 503 bila database atau config bermasalah).
 | `npm run db:migrate -- --status` | Tampilkan versi yang sudah diterapkan. |
 | `npm run db:init` | Alias lama untuk `db:migrate`. |
 | `npm run smoke:db` | Smoke test end-to-end RSVP ke database (exit 2 bila `DATABASE_URL` kosong). |
-| `npm run hash-password -- "..."` | Cetak `ADMIN_PASSWORD_HASH`. |
+| `npm run hash-password` | Cetak `ADMIN_PASSWORD_HASH` dari env `ADMIN_PASSWORD` (atau argumen). |
 | `npx tsc --noEmit` | Type check. |
 
 ## Database dan Migrasi
