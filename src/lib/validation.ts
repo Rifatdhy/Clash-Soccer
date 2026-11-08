@@ -17,6 +17,26 @@ const DATA_IMAGE_PATTERN = /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\
  */
 export const MAX_IMAGE_DATA_URL_LENGTH = 2_000_000;
 
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
+export const ALLOWED_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+] as const;
+
+const MIME_EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+export function extensionForMime(mime: string): string | null {
+  return MIME_EXTENSIONS[mime] ?? null;
+}
+
 export function isDataImageUrl(value: string): boolean {
   return DATA_IMAGE_PATTERN.test(value);
 }

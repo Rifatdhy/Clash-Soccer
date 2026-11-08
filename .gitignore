@@ -52,3 +52,6 @@ next-env.d.ts
 
 # superpowers scratch
 /.superpowers/
+
+# local uploads
+/.data/
