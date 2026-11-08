@@ -14,7 +14,15 @@ export default function AdminMatches() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Match | null>(null);
-  const [form, setForm] = useState({ title: "", date: "", time: "", location: "", slotsTotal: 20 });
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    title: "",
+    date: "",
+    time: "",
+    location: "",
+    slotsTotal: 20,
+    status: "upcoming" as Match["status"],
+  });
 
   useEffect(() => {
     loadMatches();
@@ -24,8 +32,9 @@ export default function AdminMatches() {
     try {
       const matches = await getMatches();
       setMatchList(matches);
-    } catch (error) {
-      console.error("Error loading matches:", error);
+    } catch (err) {
+      console.error("Error loading matches:", err);
+      setError("Gagal memuat daftar match.");
     } finally {
       setLoading(false);
     }
@@ -33,34 +42,53 @@ export default function AdminMatches() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ title: "", date: "", time: "19:00", location: "", slotsTotal: 20 });
+    setForm({
+      title: "",
+      date: "",
+      time: "19:00",
+      location: "",
+      slotsTotal: 20,
+      status: "upcoming",
+    });
     setModalOpen(true);
   };
 
   const openEdit = (m: Match) => {
     setEditing(m);
-    setForm({ title: m.title, date: m.date, time: m.time, location: m.location, slotsTotal: m.slotsTotal });
+    setForm({
+      title: m.title,
+      date: m.date,
+      time: m.time,
+      location: m.location,
+      slotsTotal: m.slotsTotal,
+      status: m.status,
+    });
     setModalOpen(true);
   };
 
   async function handleSave() {
+    setError(null);
     try {
       if (editing) {
-        await updateMatch(editing.id, { ...form, slotsAvailable: form.slotsTotal });
+        // Do not send slotsAvailable: the API keeps the slots already taken
+        // when the total changes.
+        await updateMatch(editing.id, { ...form });
       } else {
-        const newMatch = {
+        await createMatch({
           id: `m${Date.now()}`,
           ...form,
           slotsAvailable: form.slotsTotal,
-          status: "upcoming" as const,
-        };
-        await createMatch(newMatch);
+        });
       }
       await loadMatches();
       setModalOpen(false);
-    } catch (error) {
-      console.error("Error saving match:", error);
-      alert("Gagal menyimpan match. Silakan coba lagi.");
+    } catch (err) {
+      console.error("Error saving match:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Gagal menyimpan match. Silakan coba lagi."
+      );
     }
   }
 
@@ -69,9 +97,9 @@ export default function AdminMatches() {
     try {
       await deleteMatch(id);
       await loadMatches();
-    } catch (error) {
-      console.error("Error deleting match:", error);
-      alert("Gagal menghapus match. Silakan coba lagi.");
+    } catch (err) {
+      console.error("Error deleting match:", err);
+      setError("Gagal menghapus match. Silakan coba lagi.");
     }
   }
 
@@ -94,6 +122,12 @@ export default function AdminMatches() {
           <Plus size={16} /> Add Match
         </button>
       </div>
+
+      {error && (
+        <div role="alert" className="mb-6 p-4 border border-red-500/20 bg-red-500/10 text-sm text-red-400">
+          {error}
+        </div>
+      )}
 
       <Card hover={false} className="overflow-hidden">
         <div className="overflow-x-auto">
@@ -128,10 +162,10 @@ export default function AdminMatches() {
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(m)} className="p-1 text-secondary-text hover:text-accent transition-colors">
+                      <button onClick={() => openEdit(m)} aria-label={`Edit ${m.title}`} className="p-1 text-secondary-text hover:text-accent transition-colors">
                         <Edit3 size={14} />
                       </button>
-                      <button onClick={() => handleDelete(m.id)} className="p-1 text-secondary-text hover:text-accent transition-colors">
+                      <button onClick={() => handleDelete(m.id)} aria-label={`Hapus ${m.title}`} className="p-1 text-secondary-text hover:text-accent transition-colors">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -164,17 +198,18 @@ export default function AdminMatches() {
                 <h2 className="text-lg font-bold text-primary-text">
                   {editing ? "Edit Match" : "Add Match"}
                 </h2>
-                <button onClick={() => setModalOpen(false)} className="text-secondary-text hover:text-accent">
+                <button onClick={() => setModalOpen(false)} aria-label="Tutup form match" className="text-secondary-text hover:text-accent">
                   <X size={20} />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="match-title" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Match Title <span className="text-accent">*</span>
                   </label>
                   <input
+                    id="match-title"
                     type="text"
                     placeholder="e.g. Clash Weekly #50"
                     value={form.title}
@@ -185,10 +220,11 @@ export default function AdminMatches() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    <label htmlFor="match-date" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                       Date <span className="text-accent">*</span>
                     </label>
                     <input
+                      id="match-date"
                       type="date"
                       value={form.date}
                       onChange={(e) => setForm({ ...form, date: e.target.value })}
@@ -201,6 +237,7 @@ export default function AdminMatches() {
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <select
+                        aria-label="Jam mulai"
                         value={form.time.split(':')[0] || '19'}
                         onChange={(e) => {
                           const mins = form.time.split(':')[1] || '00';
@@ -214,6 +251,7 @@ export default function AdminMatches() {
                         })}
                       </select>
                       <select
+                        aria-label="Menit mulai"
                         value={form.time.split(':')[1] || '00'}
                         onChange={(e) => {
                           const hours = form.time.split(':')[0] || '19';
@@ -233,10 +271,11 @@ export default function AdminMatches() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="match-location" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Location <span className="text-accent">*</span>
                   </label>
                   <input
+                    id="match-location"
                     type="text"
                     placeholder="e.g. Lapangan A, Futsal XYZ"
                     value={form.location}
@@ -246,10 +285,11 @@ export default function AdminMatches() {
                 </div>
 
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                  <label htmlFor="match-slots" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
                     Total Slots <span className="text-accent">*</span>
                   </label>
                   <input
+                    id="match-slots"
                     type="number"
                     min="1"
                     max="100"
@@ -261,6 +301,24 @@ export default function AdminMatches() {
                   <p className="text-xs text-secondary-text/60 mt-1.5">
                     Jumlah pemain yang bisa mendaftar untuk match ini
                   </p>
+                </div>
+
+                <div>
+                  <label htmlFor="match-status" className="block text-xs uppercase tracking-widest text-secondary-text mb-2">
+                    Status
+                  </label>
+                  <select
+                    id="match-status"
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm({ ...form, status: e.target.value as Match["status"] })
+                    }
+                    className="w-full bg-elevated border border-border px-4 py-3 text-sm text-primary-text focus:outline-none focus:border-accent transition-colors"
+                  >
+                    <option value="upcoming">Upcoming</option>
+                    <option value="ongoing">Live / Ongoing</option>
+                    <option value="completed">Completed</option>
+                  </select>
                 </div>
               </div>
 
