@@ -30,3 +30,17 @@ test("redact leaves non-secret values untouched", () => {
     count: 2,
   });
 });
+
+test("redact serializes Error objects instead of dropping their message", () => {
+  const error = new Error("database exploded");
+  const redacted = redact({ error }) as { error: Record<string, unknown> };
+
+  assert.equal(redacted.error.name, "Error");
+  assert.equal(redacted.error.message, "database exploded");
+  assert.equal(typeof redacted.error.stack, "string");
+});
+
+test("redact serializes nested errors inside arrays", () => {
+  const redacted = redact([new Error("first")]) as Array<Record<string, unknown>>;
+  assert.equal(redacted[0].message, "first");
+});

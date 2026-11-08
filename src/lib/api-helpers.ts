@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError, ZodSchema } from "zod";
 import { isAdminRequest } from "@/lib/admin-auth";
-import { createLogger } from "@/lib/logger";
+import { createLogger, reportError } from "@/lib/logger";
 
 const logger = createLogger();
 
@@ -80,7 +80,7 @@ export function serverError(
   err: unknown,
   context: string = "An unexpected error occurred"
 ): ApiResponse<never> {
-  logger.error(context, { error: err });
+  reportError(err, { context });
   return error("Internal Server Error", 500);
 }
 

@@ -50,7 +50,14 @@ export async function query<T extends QueryResultRow>(text: string, params?: unk
     }
     return res;
   } catch (error) {
-    logger.error("Error executing query", { text, params, error });
+    // Query params can contain participant names and WhatsApp numbers. Keep
+    // them out of production logs; developers still get them locally.
+    logger.error("Error executing query", {
+      text,
+      paramCount: params?.length ?? 0,
+      ...(isProduction ? {} : { params }),
+      error,
+    });
     throw error;
   }
 }

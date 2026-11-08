@@ -15,6 +15,14 @@ export function redact(value: unknown): unknown {
     return value.map(redact);
   }
 
+  if (value instanceof Error) {
+    return { name: value.name, message: value.message, stack: value.stack };
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
   if (value && typeof value === "object") {
     const result: Record<string, unknown> = {};
     for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
