@@ -19,6 +19,28 @@ export const MAX_IMAGE_DATA_URL_LENGTH = 2_000_000;
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
+/**
+ * `Content-Length` covers the whole multipart envelope, not just the file, so
+ * it needs headroom over `MAX_UPLOAD_BYTES` or a legal 5 MB image would be
+ * rejected on the header check alone.
+ */
+export const MAX_UPLOAD_BODY_BYTES = MAX_UPLOAD_BYTES + 1024 * 1024;
+
+/**
+ * True when the declared request body is too large to even parse.
+ *
+ * `request.formData()` buffers the whole body, so checking `file.size`
+ * afterwards means a 100 MB body is already in memory before it is rejected.
+ * A missing or unparseable header returns false: the file size check still
+ * runs, and a proxy that strips the header must not break uploads.
+ */
+export function declaresOversizedBody(contentLength: string | null): boolean {
+  if (contentLength === null) return false;
+  const declared = Number(contentLength.trim());
+  if (!Number.isFinite(declared) || declared <= 0) return false;
+  return declared > MAX_UPLOAD_BODY_BYTES;
+}
+
 export const ALLOWED_IMAGE_TYPES = [
   "image/png",
   "image/jpeg",

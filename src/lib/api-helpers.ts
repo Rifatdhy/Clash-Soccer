@@ -79,6 +79,12 @@ export function tooManyRequests(
   return error(message, 429, details);
 }
 
+export function payloadTooLarge(
+  message: string = "Request body is too large"
+): ApiResponse<never> {
+  return error(message, 413);
+}
+
 export function serverError(
   err: unknown,
   context: string = "An unexpected error occurred",

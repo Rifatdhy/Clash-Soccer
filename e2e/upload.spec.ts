@@ -49,3 +49,89 @@ test("non-image uploads are rejected", async ({ page }) => {
 
   expect(response.status()).toBe(400);
 });
+
+test("an oversized upload is refused instead of buffered", async ({ page }) => {
+  await login(page);
+
+  // Bigger than the 5 MB file cap; the server must reject it from the
+  // declared body size rather than reading it into memory first.
+  const oversized = Buffer.alloc(6 * 1024 * 1024, 1);
+  const response = await page.context().request.post("/api/uploads", {
+    multipart: {
+      file: { name: "big.png", mimeType: "image/png", buffer: oversized },
+    },
+  });
+
+  expect(response.status()).toBe(413);
+});
+
+test("deleting a news item removes the upload only it used", async ({ page }) => {
+  await login(page);
+
+  const upload = await page.context().request.post("/api/uploads", {
+    multipart: { file: { name: "pixel.png", mimeType: "image/png", buffer: PNG } },
+  });
+  expect(upload.status()).toBe(201);
+  const url = ((await upload.json()) as { data: { url: string } }).data.url;
+
+  const id = `e2e-news-${Date.now()}`;
+  const created = await page.context().request.post("/api/news", {
+    data: {
+      id,
+      title: "E2E cleanup",
+      slug: `e2e-cleanup-${Date.now()}`,
+      content: "Body",
+      excerpt: "Excerpt",
+      coverImage: url,
+      date: "2026-01-01",
+    },
+  });
+  expect(created.status()).toBe(201);
+
+  const removed = await page.context().request.delete(`/api/news?id=${id}`);
+  expect(removed.status()).toBe(200);
+
+  const fetched = await page.context().request.get(url);
+  expect(fetched.status()).toBe(404);
+});
+
+test("replacing a news cover removes the previous upload", async ({ page }) => {
+  await login(page);
+
+  async function uploadOnce() {
+    const response = await page.context().request.post("/api/uploads", {
+      multipart: { file: { name: "pixel.png", mimeType: "image/png", buffer: PNG } },
+    });
+    expect(response.status()).toBe(201);
+    return ((await response.json()) as { data: { url: string } }).data.url;
+  }
+
+  const first = await uploadOnce();
+  const second = await uploadOnce();
+
+  const id = `e2e-replace-${Date.now()}`;
+  const created = await page.context().request.post("/api/news", {
+    data: {
+      id,
+      title: "E2E replace",
+      slug: `e2e-replace-${Date.now()}`,
+      content: "Body",
+      excerpt: "Excerpt",
+      coverImage: first,
+      date: "2026-01-01",
+    },
+  });
+  expect(created.status()).toBe(201);
+
+  try {
+    const updated = await page.context().request.put("/api/news", {
+      data: { id, coverImage: second },
+    });
+    expect(updated.status()).toBe(200);
+
+    expect((await page.context().request.get(first)).status()).toBe(404);
+    expect((await page.context().request.get(second)).status()).toBe(200);
+  } finally {
+    await page.context().request.delete(`/api/news?id=${id}`);
+  }
+});

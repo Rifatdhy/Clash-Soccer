@@ -2,15 +2,27 @@ import { randomUUID } from "crypto";
 import {
   badRequest,
   created,
+  payloadTooLarge,
   requireAdmin,
   serverError,
 } from "@/lib/api-helpers";
 import { putObject } from "@/lib/storage";
-import { extensionForMime, MAX_UPLOAD_BYTES } from "@/lib/validation";
+import {
+  declaresOversizedBody,
+  extensionForMime,
+  MAX_UPLOAD_BYTES,
+} from "@/lib/validation";
 
 export async function POST(request: Request) {
   const authError = await requireAdmin(request);
   if (authError) return authError;
+
+  // `formData()` buffers the entire body before any field is inspected, so an
+  // oversized upload has to be refused from the header. The file size check
+  // below still runs: the header can be absent or lie.
+  if (declaresOversizedBody(request.headers.get("content-length"))) {
+    return payloadTooLarge(`File must be at most ${MAX_UPLOAD_BYTES} bytes`);
+  }
 
   try {
     const form = await request.formData();
@@ -23,7 +35,7 @@ export async function POST(request: Request) {
       return badRequest("File is empty");
     }
     if (file.size > MAX_UPLOAD_BYTES) {
-      return badRequest(`File must be at most ${MAX_UPLOAD_BYTES} bytes`);
+      return payloadTooLarge(`File must be at most ${MAX_UPLOAD_BYTES} bytes`);
     }
 
     const extension = extensionForMime(file.type);
