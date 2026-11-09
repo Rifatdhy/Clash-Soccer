@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError, ZodSchema } from "zod";
 import { isAdminRequest } from "@/lib/admin-auth";
+import { readTextWithinLimit } from "@/lib/body-limit";
 import { createLogger, reportError, resolveRequestId } from "@/lib/logger";
 import { retryAfterSeconds } from "@/lib/retry-after";
 import { exceedsByteLimit, MAX_JSON_BODY_BYTES } from "@/lib/validation";
@@ -124,9 +125,10 @@ export async function validate<T, U>(
 ): Promise<ApiResponse<U | never>> {
   const requestId = resolveRequestId(req);
 
-  // `req.json()` buffers whatever the client sent, and route handlers have no
-  // default body limit. Refuse an oversized body from the header first so a
-  // public endpoint cannot be made to allocate an unbounded string.
+  // Two guards, because one is not enough. The header check rejects an
+  // oversized body without reading it at all, which is the cheap path. It is
+  // also advisory: a client that streams its body sends chunked encoding and
+  // no Content-Length, so the body is then read through a hard byte cap.
   if (exceedsByteLimit(req.headers.get("content-length"), MAX_JSON_BODY_BYTES)) {
     return payloadTooLarge(
       `Request body must be at most ${MAX_JSON_BODY_BYTES} bytes`,
@@ -135,7 +137,15 @@ export async function validate<T, U>(
   }
 
   try {
-    const body = await req.json();
+    const read = await readTextWithinLimit(req.body, MAX_JSON_BODY_BYTES);
+    if (read.ok === false) {
+      return payloadTooLarge(
+        `Request body must be at most ${MAX_JSON_BODY_BYTES} bytes`,
+        requestId
+      );
+    }
+
+    const body = JSON.parse(read.text);
     const data = schema.parse(body);
     return await handler(data);
   } catch (e) {

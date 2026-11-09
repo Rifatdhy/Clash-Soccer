@@ -34,11 +34,11 @@ test("db-init reports the applied migration set to an admin", async ({ page }) =
 });
 
 test("an oversized JSON body is refused before it is parsed", async ({ request }) => {
-  // 2 MB of JSON against a 1 MB cap. Without the header check this body is
+  // 5 MB of JSON against a 3 MB cap. Without the header check this body is
   // buffered and parsed first, on a public endpoint.
   const response = await request.post("/api/auth/login", {
     headers: { "content-type": "application/json" },
-    data: { username: "a".repeat(2 * 1024 * 1024), password: "x" },
+    data: { username: "a".repeat(5 * 1024 * 1024), password: "x" },
   });
 
   expect(response.status()).toBe(413);
