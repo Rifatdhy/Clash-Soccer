@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { formatEnvIssues, validateEnv } from "@/lib/env";
+import { describeHealth } from "@/lib/health";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger({ route: "/api/health" });
 
 export async function GET() {
   const startedAt = Date.now();
@@ -8,34 +12,26 @@ export async function GET() {
     validateEnv(process.env, process.env.NODE_ENV === "production")
   );
 
+  let databaseOk = true;
   try {
     await query("SELECT 1");
-
-    return NextResponse.json(
-      {
-        status: configIssues.length > 0 ? "degraded" : "ok",
-        database: "ok",
-        config: configIssues.length > 0 ? "degraded" : "ok",
-        issues: configIssues,
-        uptime: process.uptime(),
-        responseTimeMs: Date.now() - startedAt,
-        timestamp: new Date().toISOString(),
-      },
-      { status: configIssues.length > 0 ? 503 : 200 }
-    );
   } catch (error) {
-    console.error("Health check failed:", error);
-
-    return NextResponse.json(
-      {
-        status: "error",
-        database: "error",
-        config: configIssues.length > 0 ? "degraded" : "ok",
-        issues: configIssues,
-        responseTimeMs: Date.now() - startedAt,
-        timestamp: new Date().toISOString(),
-      },
-      { status: 503 }
-    );
+    databaseOk = false;
+    logger.error("Health check database probe failed", { error });
   }
+
+  const health = describeHealth({ databaseOk, configIssues });
+
+  return NextResponse.json(
+    {
+      status: health.status,
+      database: health.database,
+      config: health.config,
+      issues: configIssues,
+      uptime: process.uptime(),
+      responseTimeMs: Date.now() - startedAt,
+      timestamp: new Date().toISOString(),
+    },
+    { status: health.httpStatus }
+  );
 }

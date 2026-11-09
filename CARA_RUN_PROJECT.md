@@ -37,8 +37,12 @@ sudo -u postgres psql -c "CREATE DATABASE clash_soccer;"
 
 ### Step 4: Inisialisasi Skema Database
 ```bash
-npm run db:init
+npm run db:migrate
 ```
+
+`db:init` masih ada sebagai alias, tetapi `db:migrate` adalah nama yang
+disarankan karena menjalankan file di `migrations/` secara berurutan dan
+mencatatnya di tabel `schema_migrations`.
 
 ### Step 5: Jalankan Development Server
 ```bash
@@ -58,7 +62,7 @@ Buka http://localhost:3000 — semua fitur (public + admin) berfungsi penuh.
 4. Set environment variables di Vercel:
    - `DATABASE_URL` (dari Neon/Supabase, biasanya sudah `?sslmode=require`)
    - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_AUTH_SECRET`
-5. Jalankan `npm run db:init` dengan env produksi (secara lokal dengan DATABASE_URL produksi)
+5. Jalankan `npm run db:migrate` dengan env produksi (secara lokal dengan DATABASE_URL produksi). Migrasi lewat HTTP (`/api/db-init`) dinonaktifkan di produksi.
 
 ### Opsi B: VPS
 - Setup Node 20+, PostgreSQL, reverse proxy (Nginx/Caddy) + HTTPS
@@ -74,7 +78,7 @@ Buka http://localhost:3000 — semua fitur (public + admin) berfungsi penuh.
 | Run dev server | `npm run dev` |
 | Build production | `npm run build` |
 | Start production | `npm start` |
-| Initialize database | `npm run db:init` |
+| Jalankan migrasi database | `npm run db:migrate` |
 | Check linting | `npm run lint` |
 | Type check | `npx tsc --noEmit` |
 
@@ -95,7 +99,7 @@ npm run dev -- -p 3001
 ### Error: "database does not exist"
 ```bash
 sudo -u postgres createdb clash_soccer
-npm run db:init
+npm run db:migrate
 ```
 
 ---
