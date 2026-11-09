@@ -14,7 +14,8 @@
     "smoke:db": "node scripts/smoke-db.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "test:e2e": "playwright test",
-    "hash-password": "node scripts/hash-password.mjs"
+    "hash-password": "node scripts/hash-password.mjs",
+    "logo:mark": "node scripts/make-logo-mark.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
