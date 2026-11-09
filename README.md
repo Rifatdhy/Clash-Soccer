@@ -162,6 +162,10 @@ mengunggah `playwright-report/` dan `test-results/` sebagai artifact.
 - `src/lib/rate-limit.ts` memilih store `memory` atau `database` lewat
   `RATE_LIMIT_STORE`. Kegagalan store bersama jatuh ke fallback in-memory agar
   API tidak ikut mati.
+- `src/lib/data-cache.ts` menyimpan cache baca di `globalThis` agar route
+  handler dan page berbagi satu store, dan memangkas entri kedaluwarsa begitu
+  jumlahnya melewati 500 supaya slug berita/galeri yang dibuat crawler tidak
+  menumpuk selamanya.
 - `src/lib/storage.ts` memilih driver `local` atau `s3`; SigV4 ditandatangani
   dengan `node:crypto` tanpa SDK.
 - `src/proxy.ts` melindungi `/admin` sekaligus membuat CSP nonce per request.
@@ -178,6 +182,10 @@ mengunggah `playwright-report/` dan `test-results/` sebagai artifact.
 - Upload dibatasi 5 MB, allowlist MIME gambar, nama file acak, dan guard path
   traversal. `Content-Length` yang sudah melebihi batas ditolak dengan 413
   sebelum body dibaca, sehingga unggahan besar tidak sempat masuk memori.
+- Body JSON dibatasi 1 MB (`MAX_JSON_BODY_BYTES`). Route handler Next.js tidak
+  punya batas bawaan, jadi `validate()` menolak body yang terlalu besar lewat
+  header `Content-Length` sebelum `req.json()` memuatnya ke memori. Login
+  melakukan rate limit lebih dulu, baru membaca body.
 - File unggahan ikut dibersihkan: saat berita, album, atau item album dihapus,
   atau saat logo/banner/cover diganti, file lama dihapus hanya jika tidak ada
   baris lain yang masih memakainya. Pembersihan bersifat best-effort dan tidak
@@ -185,9 +193,21 @@ mengunggah `playwright-report/` dan `test-results/` sebagai artifact.
 - `npm run db:migrate` dan `/api/db-init` memakai advisory lock PostgreSQL yang
   sama (`4829163`), jadi dua deploy bersamaan tidak menerapkan DDL yang sama
   dua kali.
-- Rate limit login 5 percobaan/15 menit dan RSVP 20/15 menit per IP.
-- Rahasia (`password`, `token`, `authorization`, `cookie`, `secret`) diredaksi
-  dari log.
+- Rate limit login 5 percobaan/15 menit dan RSVP 20/15 menit per IP. Respons 429
+  menyertakan header `Retry-After` (detik) supaya klien tahu kapan boleh coba
+  lagi. Bila store rate limit gagal, limiter fallback ke memori dan mencatat
+  peringatan alih-alih menggagalkan request.
+- Rahasia (`password`, `token`, `authorization`, `cookie`, `secret`) dan data
+  pribadi (`whatsapp`, `phone`, `email`, `duplicates`) diredaksi dari log. Nomor
+  WhatsApp peserta RSVP tidak pernah ditulis mentah.
+- 4xx dicatat sebagai `warn`, 5xx sebagai `error`, sehingga probe klien tidak
+  menenggelamkan kegagalan server yang sebenarnya.
+- Teks yang ditulis admin punya batas panjang (judul/slug 255, pertanyaan FAQ
+  300, jawaban FAQ 3000, isi berita 100.000, ringkasan 500 karakter), dan FAQ
+  menolak pertanyaan atau jawaban kosong.
+- JSON-LD di-escape (`<`, `>`, `&`, U+2028/U+2029) sebelum disisipkan ke
+  `<script type="application/ld+json">`, sehingga isi data tidak bisa menutup
+  tag lebih awal.
 - Setiap respons membawa `x-request-id` (dari proxy); error 500 mencatat id yang
   sama di log sehingga laporan pengguna bisa ditelusuri. Header masuk hanya
   dipakai bila bentuknya wajar, agar tidak bisa memalsukan baris log.
@@ -198,8 +218,12 @@ mengunggah `playwright-report/` dan `test-results/` sebagai artifact.
 2. Jalankan `npm run db:migrate` terhadap database produksi.
 3. `npm run build` lalu `npm start` (atau platform Next.js pilihan Anda).
 4. Pilih `RATE_LIMIT_STORE=database` bila ada lebih dari satu instance.
-5. Pilih `STORAGE_DRIVER=s3` bila filesystem tidak persisten (serverless).
-6. Arahkan health check ke `GET /api/health`.
+5. Pastikan reverse proxy menulis `X-Real-IP` (atau `X-Forwarded-For`) di setiap
+   request. Tanpa header itu semua klien berbagi satu bucket rate limit, jadi
+   beberapa percobaan gagal bisa mengunci semua pengguna; aplikasi mencatat satu
+   peringatan saat header tidak ada.
+6. Pilih `STORAGE_DRIVER=s3` bila filesystem tidak persisten (serverless).
+7. Arahkan health check ke `GET /api/health`.
 
 Saat ini proyek belum di-deploy oleh agent; semua pemeriksaan dijalankan lokal.
 
