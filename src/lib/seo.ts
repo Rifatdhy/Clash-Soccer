@@ -59,6 +59,19 @@ export function buildContentPaths(input: {
   return paths;
 }
 
+/**
+ * Sitemap metadata for a detail path. Returns `null` for anything it does not
+ * recognise instead of guessing: a fallback would label a stray path as news
+ * and quietly publish a wrong `changeFrequency`/`priority`.
+ */
+export function sitemapMetaFor(
+  path: string
+): { changeFrequency: "monthly"; priority: number } | null {
+  if (path.startsWith("/news/")) return { changeFrequency: "monthly", priority: 0.6 };
+  if (path.startsWith("/gallery/")) return { changeFrequency: "monthly", priority: 0.5 };
+  return null;
+}
+
 export function buildSportsClubJsonLd(input: {
   name: string;
   description: string;

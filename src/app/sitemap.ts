@@ -1,6 +1,11 @@
 import type { MetadataRoute } from "next";
 import { fetchAlbums, fetchNews } from "@/lib/data";
-import { buildContentPaths, buildSitemapEntries, getSiteUrl } from "@/lib/seo";
+import {
+  buildContentPaths,
+  buildSitemapEntries,
+  getSiteUrl,
+  sitemapMetaFor,
+} from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -13,17 +18,6 @@ const PAGES = [
   { path: "/about", changeFrequency: "monthly" as const, priority: 0.5 },
   { path: "/contact", changeFrequency: "monthly" as const, priority: 0.5 },
 ];
-
-const CONTENT_META = {
-  news: { changeFrequency: "monthly" as const, priority: 0.6 },
-  gallery: { changeFrequency: "monthly" as const, priority: 0.5 },
-};
-
-function metaFor(path: string) {
-  if (path.startsWith("/news/")) return CONTENT_META.news;
-  if (path.startsWith("/gallery/")) return CONTENT_META.gallery;
-  return null;
-}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -50,11 +44,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: PAGES[index].priority,
   }));
 
-  const contentEntries = buildSitemapEntries(base, contentPaths).map((entry) => ({
-    ...entry,
-    lastModified: now,
-    ...(metaFor(new URL(entry.url).pathname) ?? CONTENT_META.news),
-  }));
+  // A path with no known metadata is left out of the sitemap instead of being
+  // labelled as news; only paths `sitemapMetaFor` understands get an entry.
+  const contentEntries = buildSitemapEntries(base, contentPaths).flatMap((entry) => {
+    const meta = sitemapMetaFor(new URL(entry.url).pathname);
+    if (!meta) return [];
+    return [{ ...entry, lastModified: now, ...meta }];
+  });
 
   return [...staticEntries, ...contentEntries];
 }
+
