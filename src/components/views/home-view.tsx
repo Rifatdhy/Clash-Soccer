@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, MessageCircle, ChevronDown, MapPin, Clock, Users } from "lucide-react";
-import Section, { SectionTitle, SectionSubtitle } from "@/components/section";
+import Section from "@/components/section";
+import { SectionLabel } from "@/components/section-label";
 import MatchCard from "@/components/match-card";
 import NewsCard from "@/components/news-card";
 import GalleryCard from "@/components/gallery-card";
@@ -157,8 +158,7 @@ export default function HomeView({
 
       {/* Upcoming Match */}
       <Section id="schedule">
-        <SectionTitle>Next Match</SectionTitle>
-        <SectionSubtitle>Jangan lewatkan pertandingan berikutnya.</SectionSubtitle>
+        <SectionLabel>Next Match</SectionLabel>
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {upcomingMatches.map((match, i) => (
             <MatchCard key={match.id} match={match} index={i} />
@@ -188,10 +188,7 @@ export default function HomeView({
             viewport={{ once: true }}
             transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
           >
-            <SectionTitle className="text-left">Tentang Clash.Soccer</SectionTitle>
-            <SectionSubtitle className="text-left">
-              Komunitas mini soccer yang lahir dari kecintaan terhadap sepak bola.
-            </SectionSubtitle>
+            <SectionLabel>Tentang Clash.Soccer</SectionLabel>
             <p className="text-secondary-text leading-relaxed mt-6 max-w-lg">
               Clash.Soccer adalah komunitas mini soccer berbasis di Jakarta. Kami mengadakan
               pertandingan rutin setiap minggu, turnamen bulanan, dan berbagai event seru lainnya.
@@ -226,8 +223,7 @@ export default function HomeView({
 
       {/* Latest News */}
       <Section id="news">
-        <SectionTitle>Latest News</SectionTitle>
-        <SectionSubtitle>Berita dan pengumuman terbaru dari komunitas.</SectionSubtitle>
+        <SectionLabel>Latest News</SectionLabel>
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {latestNews.map((item, i) => (
             <NewsCard key={item.id} item={item} index={i} />
@@ -250,8 +246,7 @@ export default function HomeView({
 
       {/* Gallery Preview */}
       <Section className="bg-surface border-y border-border" id="gallery">
-        <SectionTitle>Gallery</SectionTitle>
-        <SectionSubtitle>Dokumentasi setiap momen pertandingan.</SectionSubtitle>
+        <SectionLabel>Gallery</SectionLabel>
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {latestAlbums.map((album, i) => (
             <GalleryCard key={album.id} album={album} index={i} />
@@ -274,8 +269,7 @@ export default function HomeView({
 
       {/* FAQ Preview */}
       <Section id="faq">
-        <SectionTitle>FAQ</SectionTitle>
-        <SectionSubtitle>Pertanyaan yang sering diajukan.</SectionSubtitle>
+        <SectionLabel>FAQ</SectionLabel>
         <div className="mt-12 max-w-3xl mx-auto">
           {faqPreview.map((faq, i) => (
             <motion.div
@@ -311,10 +305,7 @@ export default function HomeView({
       {/* Contact Preview */}
       <Section className="bg-surface border-t border-border" id="contact">
         <div className="text-center max-w-2xl mx-auto">
-          <SectionTitle>Get in Touch</SectionTitle>
-          <SectionSubtitle>
-            Punya pertanyaan atau ingin bergabung? Hubungi kami.
-          </SectionSubtitle>
+          <SectionLabel>Get in Touch</SectionLabel>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
