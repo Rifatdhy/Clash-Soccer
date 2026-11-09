@@ -10,6 +10,14 @@
 
 export const CACHE_STORE_KEY = "__clashSoccerDataCache";
 
+/**
+ * Above this many entries, `writeCache` sweeps expired keys. Without it the
+ * store only drops an entry when that exact key is read again, and public
+ * `/news/<slug>` and `/gallery/<id>` routes let anyone mint new keys — an
+ * entry from a slug nobody revisits would live for the process lifetime.
+ */
+export const CACHE_PRUNE_THRESHOLD = 500;
+
 interface CacheEntry {
   expiresAt: number;
   value: unknown;
@@ -38,7 +46,19 @@ export function readCache(key: string): unknown {
 }
 
 export function writeCache(key: string, value: unknown, ttlMs: number): void {
-  store().set(key, { expiresAt: Date.now() + ttlMs, value });
+  const target = store();
+  target.set(key, { expiresAt: Date.now() + ttlMs, value });
+
+  if (target.size > CACHE_PRUNE_THRESHOLD) pruneCache();
+}
+
+/** Drop every expired entry. Called automatically on write past the threshold. */
+export function pruneCache(): void {
+  const target = store();
+  const now = Date.now();
+  for (const [key, entry] of target) {
+    if (entry.expiresAt <= now) target.delete(key);
+  }
 }
 
 export function clearCache(): void {
