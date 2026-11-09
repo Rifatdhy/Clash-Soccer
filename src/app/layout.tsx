@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Oswald } from "next/font/google";
+import { Geist, Geist_Mono, Oswald, Instrument_Serif, Barlow_Condensed } from "next/font/google";
 import LayoutContent from "@/components/layout-content";
 import { fetchSettings } from "@/lib/data";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
@@ -20,6 +20,19 @@ const geistMono = Geist_Mono({
 const oswald = Oswald({
   subsets: ["latin"],
   variable: "--font-display",
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-instrument-serif",
+});
+
+const barlowCondensed = Barlow_Condensed({
+  weight: ["500", "600"],
+  subsets: ["latin"],
+  variable: "--font-barlow-condensed",
 });
 
 export const metadata: Metadata = {
@@ -64,7 +77,10 @@ export default async function RootLayout({
   const settings = await loadSettings();
 
   return (
-    <html lang="id" className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable}`}>
+    <html
+      lang="id"
+      className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable} ${instrumentSerif.variable} ${barlowCondensed.variable}`}
+    >
       <body className="bg-charcoal text-primary-text font-sans antialiased min-h-screen flex flex-col">
         <LayoutContent settings={settings}>{children}</LayoutContent>
       </body>

@@ -14,6 +14,19 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display);
+
+  --color-ink: #0C0C0D;
+  --color-ink-raised: #151517;
+  --color-ink-line: #2A2A2D;
+  --color-bone: #F2EFE9;
+  --color-bone-dim: #A6A29B;
+  --color-crest: #C4000D;
+  --color-crest-ink: #FF3B3B;
+  --color-crest-hover: #A3000A;
+  --color-pitch: #6FB77A;
+
+  --font-statement: var(--font-instrument-serif);
+  --font-condensed: var(--font-barlow-condensed);
 }
 
 * {
@@ -32,31 +45,22 @@ body {
   color: #FFFFFF;
 }
 
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
+@keyframes hero-enter {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+.hero-enter {
+  animation: hero-enter 400ms cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 
-.animate-fade-in {
-  animation: fade-in 0.6s ease-out forwards;
-}
-
-.animate-fade-up {
-  animation: fade-up 0.8s ease-out forwards;
-}
-
-.animate-pulse-subtle {
-  animation: pulse-subtle 3s ease-in-out infinite;
+.live-pulse {
+  animation: live-pulse 2.5s ease-in-out infinite;
 }
 
 :focus-visible {
@@ -68,9 +72,15 @@ body {
   *,
   *::before,
   *::after {
+    animation: none !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .live-pulse {
+    animation: none !important;
+    opacity: 1;
   }
 }
