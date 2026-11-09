@@ -120,20 +120,20 @@ git commit -m "feat(design): add crest palette and display fonts"
 - Modify: `package.json` (script `logo:mark`)
 
 **Interfaces:**
-- Produces: berkas `public/logo-mark.png` dengan rasio sekitar 1.8 (wordmark CLASH/SOCCER). Dipakai Task 7 (navbar, footer).
+- Produces: berkas `public/logo-mark.png` berukuran **807x262 (rasio 3.08)**, hasil crop ke bar hitam wordmark CLASH/SOCCER. Dipakai Task 7 (navbar, footer).
 
 - [ ] **Step 1: Tulis skrip pembuat mark**
 
-Skrip membaca `public/logo.png`, mengambil pita atas (wordmark) dengan `.extract({ left: 0, top: 120, width: 1024, height: 480 })`, lalu `.trim({ threshold: 10 })`, lalu menulis `public/logo-mark.png`. Rasio hasil yang sudah diverifikasi adalah 853x468 (1.82). Skrip memakai `sharp` yang sudah terpasang. Cetak lebar, tinggi, dan rasio hasil.
+Skrip membaca `public/logo.png` dan mengambil bar hitam wordmark dengan `.extract({ left: 108, top: 261, width: 807, height: 262 })`, lalu menulis `public/logo-mark.png`. Hasil terverifikasi: **807x262, rasio 3.08**. Batas crop diukur dari piksel: bar hitam solid di baris 261..523 dan kolom 108..914; glyph putih di dalamnya di x 151..871, y 299..490; tidak ada piksel putih di kolom tepi, jadi tidak ada glyph terpotong. Tinggi berhenti di 262 (bukan 263) karena baris 523 adalah tepi anti-alias stroke putih shield di bawah bar. **Jangan memakai `.trim()`**: trim akan memotong balik ke glyph putih dan membuang bidang hitam yang membuat mark terbaca di navbar gelap. `sharp` bukan dependency proyek (opsional milik `next`), jadi impor lewat `await import("sharp")` di dalam try/catch agar pesan errornya terbaca. Cetak lebar, tinggi, dan rasio hasil.
 
 - [ ] **Step 2: Jalankan skrip**
 
 Run: `node scripts/make-logo-mark.mjs`
-Expected: mencetak `853x468 ratio=1.82` (atau nilai dekat) dan menulis `public/logo-mark.png`.
+Expected: mencetak `807x262 ratio=3.08` dan menulis `public/logo-mark.png`.
 
 - [ ] **Step 3: Periksa hasilnya secara visual**
 
-Buka `public/logo-mark.png` dengan tool `read`. Pastikan tulisan "CLASH" dan "SOCCER" terbaca utuh, tidak terpotong di bawah, dan tidak ada sisa crest di tepi bawah. Kalau terpotong, naikkan `height` pada `extract` dan ulangi Step 2.
+Buka `public/logo-mark.png` dengan tool `read`. Pastikan tulisan "CLASH" dan "SOCCER" terbaca utuh, tidak terpotong di bawah, dan tidak ada sisa crest (pita merah/hijau di atas, helm di bawah, bingkai putih shield) di tepi mana pun. Kalau bar hitam belum pas, geser `top`/`height` pada `extract` dan ulangi Step 2. Verifikasi tambahan: render mark pada tinggi 28, 32, dan 40 px di atas latar `#0C0C0D` dan pastikan wordmark masih terbaca.
 
 - [ ] **Step 4: Tambahkan script npm**
 
@@ -366,7 +366,7 @@ git commit -m "feat(design): add story card and album tile"
 
 - [ ] **Step 1: Tulis ulang `navbar.tsx`**
 
-Pertahankan `links` dan perilaku `usePathname`. Latar `bg-ink/95 backdrop-blur-sm border-b border-ink-line` saat `scrolled || !isHome`, transparan saat beranda di posisi atas. Logo memakai `src="/logo-mark.png"` dengan `width={853} height={468}` dan `className="h-7 w-auto md:h-8"`, alt `"Clash Soccer"`. Hapus teks "CLASH.SOCCER" di samping logo karena wordmark sudah memuatnya. Tautan desktop memakai `font-condensed text-sm uppercase tracking-[0.14em]`, aktif `text-bone` dengan `border-b-2 border-crest pb-1`, tidak aktif `text-bone-dim hover:text-bone`. Tombol menu mobile: `aria-label` menjadi `"Menu"`, tambahkan `aria-expanded={mobileOpen}` dan `aria-controls="mobile-menu"`, beri `p-3` agar target 44px. Panel mobile memakai `id="mobile-menu"`, latar `bg-ink`, tautan `font-statement text-3xl text-bone` dengan `py-3` per tautan. Pertahankan `AnimatePresence` hanya untuk buka/tutup panel; hapus animasi `y` per tautan dan ganti dengan satu fade 150ms. Hapus `font-display`.
+Pertahankan `links` dan perilaku `usePathname`. Latar `bg-ink/95 backdrop-blur-sm border-b border-ink-line` saat `scrolled || !isHome`, transparan saat beranda di posisi atas. Logo memakai `src="/logo-mark.png"` dengan `width={807} height={262}` dan `className="h-7 w-auto md:h-8"`, alt `"Clash Soccer"`. Hapus teks "CLASH.SOCCER" di samping logo karena wordmark sudah memuatnya. Tautan desktop memakai `font-condensed text-sm uppercase tracking-[0.14em]`, aktif `text-bone` dengan `border-b-2 border-crest pb-1`, tidak aktif `text-bone-dim hover:text-bone`. Tombol menu mobile: `aria-label` menjadi `"Menu"`, tambahkan `aria-expanded={mobileOpen}` dan `aria-controls="mobile-menu"`, beri `p-3` agar target 44px. Panel mobile memakai `id="mobile-menu"`, latar `bg-ink`, tautan `font-statement text-3xl text-bone` dengan `py-3` per tautan. Pertahankan `AnimatePresence` hanya untuk buka/tutup panel; hapus animasi `y` per tautan dan ganti dengan satu fade 150ms. Hapus `font-display`.
 
 - [ ] **Step 2: Tulis ulang `footer.tsx`**
 

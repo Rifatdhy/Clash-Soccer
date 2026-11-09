@@ -13,9 +13,13 @@ import { fileURLToPath } from "node:url";
 // The bar's exact bounds were measured from the pixels, not guessed:
 //   solid black rows 261..523, black columns 108..914
 //   white glyphs inside it span x 151..871, y 299..490
-// so the crop below leaves 43px of black on the left and right and 37/32px on
+// so the crop below leaves 43px of black on the left and right and 37/33px on
 // top and bottom. Nothing is clipped, and no crest fragment (the red/green
 // ribbon above, the helmet below) enters the mark.
+//
+// The height stops at 522 rather than 523: row 523 is the anti-aliased top edge
+// of the white shield stroke below the bar, and including it leaves a faint 1px
+// grey sliver along the bottom edge.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
@@ -25,7 +29,7 @@ const outputPath = join(rootDir, "public", "logo-mark.png");
 // Crop straight to the inner black bar. Because the crop is already exactly the
 // bar, no trim() is needed — and trim() would be wrong here, since it would cut
 // back to the white glyphs and drop the black field the mark sits on.
-const CROP = { left: 108, top: 261, width: 807, height: 263 };
+const CROP = { left: 108, top: 261, width: 807, height: 262 };
 
 let sharp;
 try {
