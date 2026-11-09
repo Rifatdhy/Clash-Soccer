@@ -8,6 +8,7 @@
  */
 
 import { query } from "./db.ts";
+import { clearCache, readCache, writeCache } from "./data-cache.ts";
 import { groupAlbumItems } from "./albums.ts";
 import { DEFAULT_SETTINGS } from "./defaults.ts";
 import type {
@@ -26,21 +27,18 @@ import type {
 
 const CACHE_TTL_MS = 30_000;
 
-const cache = new Map<string, { expiresAt: number; value: unknown }>();
-
 async function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
-  const now = Date.now();
-  const hit = cache.get(key);
-  if (hit && hit.expiresAt > now) return hit.value as T;
+  const hit = readCache(key);
+  if (hit !== undefined) return hit as T;
 
   const value = await load();
-  cache.set(key, { expiresAt: now + CACHE_TTL_MS, value });
+  writeCache(key, value, CACHE_TTL_MS);
   return value;
 }
 
 /** Call after every successful write so public pages refetch. */
 export function invalidateDataCache(): void {
-  cache.clear();
+  clearCache();
 }
 
 // --- Mappers ---

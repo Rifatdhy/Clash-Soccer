@@ -1,35 +1,15 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { getSettings } from "@/lib/settings-store";
-import { DEFAULT_SETTINGS } from "@/lib/defaults";
 import type { Setting } from "@/types";
 import { MessageCircle } from "lucide-react";
 import { InstagramIcon } from "@/components/icons";
 
-export default function Footer() {
-  // Brand defaults keep the footer usable while settings load and when the
-  // request fails; the API is the source of truth once it answers.
-  const [settings, setSettings] = useState<Setting>(DEFAULT_SETTINGS);
-
-  useEffect(() => {
-    let active = true;
-
-    getSettings()
-      .then((value) => {
-        if (active) setSettings(value);
-      })
-      .catch((error) => {
-        console.error("Failed to load footer settings:", error);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
+/**
+ * Settings arrive from the server layout, so the description and contact links
+ * are part of the first HTML response. There is no fetch here and therefore no
+ * window where the footer shows placeholder copy.
+ */
+export default function Footer({ settings }: { settings: Setting }) {
   return (
     <footer className="border-t border-border bg-charcoal">
       <div className="mx-auto max-w-7xl px-4 py-16 md:py-20">

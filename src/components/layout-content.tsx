@@ -4,8 +4,15 @@ import { usePathname } from "next/navigation";
 import Navbar from "./navbar";
 import Footer from "./footer";
 import { motion, AnimatePresence } from "framer-motion";
+import type { Setting } from "@/types";
 
-export default function LayoutContent({ children }: { children: React.ReactNode }) {
+export default function LayoutContent({
+  children,
+  settings,
+}: {
+  children: React.ReactNode;
+  settings: Setting;
+}) {
   const pathname = usePathname();
   const isAdminRoute = pathname?.startsWith("/admin");
 
@@ -25,7 +32,7 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
           </motion.div>
         </AnimatePresence>
       </main>
-      {!isAdminRoute && <Footer />}
+      {!isAdminRoute && <Footer settings={settings} />}
     </>
   );
 }
