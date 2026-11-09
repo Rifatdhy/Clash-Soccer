@@ -48,7 +48,6 @@ export async function GET(req: Request) {
 
     return success(await fetchMatches());
   } catch (e) {
-    console.error("Error in GET /api/matches:", e);
     return serverError(e, "Failed to fetch matches");
   }
 }

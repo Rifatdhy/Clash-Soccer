@@ -1,9 +1,12 @@
 import { randomUUID } from "crypto";
 import { query, withTransaction } from "./db.ts";
 import { invalidateDataCache } from "./data.ts";
+import { createLogger } from "./logger.ts";
 import { canReserve, restoreSlots } from "./slots.ts";
 import { duplicateWhatsAppNumbers } from "./rsvp-utils.ts";
 import type { Participant, RsvpEntry } from "@/types";
+
+const logger = createLogger({ service: "rsvp" });
 
 export type CreateRsvpResult =
   | { kind: "ok"; id: string; registeredAt: string }
@@ -38,7 +41,7 @@ function parseParticipants(raw: unknown): ParticipantRow[] {
     try {
       parsed = JSON.parse(raw);
     } catch (error) {
-      console.error("Failed to parse participants JSON", error);
+      logger.error("Failed to parse stored participants JSON", { error });
       return [];
     }
   }

@@ -1,6 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { STORAGE_KEYS } from "./constants";
+import { createLogger } from "./logger";
+
+const logger = createLogger({ service: "admin-auth" });
+
 const JWT_AUDIENCE = "clash-soccer:admin";
 const JWT_ISSUER = "clash-soccer:auth";
 const JWT_EXPIRATION = "24h";
@@ -11,7 +15,9 @@ function getAuthSecretKey() {
     if (process.env.NODE_ENV === "production") {
       throw new Error("FATAL: ADMIN_AUTH_SECRET environment variable must be set in production!");
     }
-    console.warn("WARNING: ADMIN_AUTH_SECRET environment variable is not set. Using a fallback temporary key.");
+    logger.warn(
+      "ADMIN_AUTH_SECRET is not set; using the development fallback key. Never deploy like this."
+    );
     return new TextEncoder().encode("clash-soccer-default-secret-key-change-me-in-production-12345678");
   }
   return new TextEncoder().encode(secret);
@@ -35,7 +41,7 @@ export async function verifyAdminSessionToken(token?: string) {
 
   const adminUsername = process.env.ADMIN_USERNAME;
   if (!adminUsername || adminUsername.trim() === "") {
-    console.error("ERROR: ADMIN_USERNAME environment variable is not configured.");
+    logger.error("ADMIN_USERNAME is not configured; every admin session is rejected");
     return false;
   }
 

@@ -69,3 +69,11 @@ test("resolveRequestId replaces ids that are malformed or too long", () => {
     assert.notEqual(id, bad);
   }
 });
+
+test("the logger exposes only the request id helper that sanitises input", async () => {
+  // `getRequestId` was the earlier, unsanitised version. Leaving it exported
+  // invites a future caller to bypass the length/charset check.
+  const logger = await import("../src/lib/logger.ts");
+  assert.equal("getRequestId" in logger, false);
+  assert.equal(typeof logger.resolveRequestId, "function");
+});

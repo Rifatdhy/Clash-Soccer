@@ -1,3 +1,7 @@
+import { createLogger } from "./logger.ts";
+
+const logger = createLogger({ service: "env" });
+
 export type EnvIssueKind = "missing" | "weak" | "invalid";
 
 export interface EnvIssue {
@@ -79,5 +83,5 @@ export function assertEnv(env: Record<string, string | undefined> = process.env)
   if (env.NODE_ENV === "production") {
     throw new Error(message);
   }
-  console.warn(message);
+  logger.warn("Invalid environment configuration", { issues: formatEnvIssues(issues) });
 }

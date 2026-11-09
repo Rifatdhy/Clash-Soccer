@@ -58,10 +58,6 @@ export function createLogger(base: LogContext = {}) {
   };
 }
 
-export function getRequestId(request: Request): string {
-  return request.headers.get("x-request-id")?.trim() || randomUUID();
-}
-
 const SAFE_REQUEST_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 
 /**

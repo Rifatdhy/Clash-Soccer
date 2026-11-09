@@ -1,4 +1,5 @@
 import { query } from "./db.ts";
+import { createLogger } from "./logger.ts";
 import {
   createMemoryStore,
   createPostgresStore,
@@ -7,6 +8,8 @@ import {
 } from "./rate-limit-store.ts";
 
 export type { RateLimitOptions } from "./rate-limit-store.ts";
+
+const logger = createLogger({ service: "rate-limit" });
 
 export const RATE_LIMIT_DEFAULTS: RateLimitOptions = {
   windowMs: 15 * 60 * 1000,
@@ -48,7 +51,9 @@ export async function consume(
   } catch (error) {
     // A broken shared store must not take the whole API down. Fall back to
     // per-instance counters and let the operator investigate the logs.
-    console.error("Rate limit store unavailable; using in-memory fallback", error);
+    logger.error("Rate limit store unavailable; using the in-memory fallback", {
+      error,
+    });
     return fallbackStore.consume(bucketKey, options);
   }
 }
@@ -59,7 +64,7 @@ export async function resetRateLimit(scope: string, key: string) {
   try {
     await getStore().reset(bucketKey);
   } catch (error) {
-    console.error("Failed to reset rate limit bucket", error);
+    logger.error("Failed to reset a rate limit bucket", { error });
   }
 }
 
