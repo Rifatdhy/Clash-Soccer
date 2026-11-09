@@ -3,6 +3,7 @@ import { withTransaction } from "@/lib/db";
 import { fetchSettings, invalidateDataCache } from "@/lib/data";
 import { buildUpdate } from "@/lib/sql";
 import { isAllowedImageUrl } from "@/lib/validation";
+import { releaseReplacedUploads } from "@/lib/storage-cleanup-server";
 import {
   badRequest,
   requireAdmin,
@@ -63,19 +64,32 @@ export async function PUT(req: Request) {
     }
 
     try {
-      await withTransaction(async (client) => {
-        const current = await client.query(
-          "SELECT id FROM settings WHERE id = 'default' FOR UPDATE"
-        );
+      const previous = await withTransaction(async (client) => {
+        const current = await client.query<{
+          logo_url: string | null;
+          banner_url: string | null;
+        }>("SELECT logo_url, banner_url FROM settings WHERE id = 'default' FOR UPDATE");
+
         if (current.rowCount === 0) {
           await client.query(
             `INSERT INTO settings (id, community_name) VALUES ('default', 'Clash.Soccer')`
           );
         }
         await client.query(plan.text, plan.values);
+
+        return current.rows[0] ?? { logo_url: null, banner_url: null };
       });
 
       invalidateDataCache();
+      // A swapped logo or banner leaves the previous file unreferenced. Only
+      // fields the request actually set count as replacements.
+      await releaseReplacedUploads(
+        [previous.logo_url, previous.banner_url],
+        [
+          "logoUrl" in data ? data.logoUrl : previous.logo_url,
+          "bannerUrl" in data ? data.bannerUrl : previous.banner_url,
+        ]
+      );
       return success(await fetchSettings());
     } catch (e) {
       return serverError(e, "Failed to update settings");

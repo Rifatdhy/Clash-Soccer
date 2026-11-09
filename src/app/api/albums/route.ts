@@ -5,6 +5,10 @@ import { fetchAlbum, fetchAlbums, invalidateDataCache } from "@/lib/data";
 import { buildUpdate } from "@/lib/sql";
 import { isAllowedImageUrl, isHttpUrl } from "@/lib/validation";
 import {
+  releaseUploadsFor,
+  releaseReplacedUploads,
+} from "@/lib/storage-cleanup-server";
+import {
   badRequest,
   created,
   notFound,
@@ -137,12 +141,22 @@ export async function PUT(req: Request) {
     }
 
     try {
+      // Old cover is needed after the write to know what became unreferenced.
+      const previous = await query<{ cover_url: string | null }>(
+        "SELECT cover_url FROM albums WHERE id = $1",
+        [id]
+      );
+
       const res = await query(plan.text, plan.values);
       if (res.rowCount === 0) {
         return notFound("Album not found");
       }
 
       invalidateDataCache();
+      await releaseReplacedUploads(
+        [previous.rows[0]?.cover_url],
+        ["coverUrl" in updates ? updates.coverUrl : previous.rows[0]?.cover_url]
+      );
       return success(await fetchAlbums());
     } catch (e) {
       return serverError(e, "Failed to update album");
@@ -162,12 +176,35 @@ export async function DELETE(req: Request) {
       return badRequest("Album ID is required");
     }
 
-    const res = await query("DELETE FROM albums WHERE id = $1", [id]);
-    if (res.rowCount === 0) {
+    // Collect every upload the album owns before the cascade removes the
+    // rows. `album_items` disappears via ON DELETE CASCADE, so the URLs have
+    // to be read while they still exist.
+    const urls = await withTransaction(async (client) => {
+      const albumRes = await client.query<{ cover_url: string | null }>(
+        "SELECT cover_url FROM albums WHERE id = $1",
+        [id]
+      );
+      if (albumRes.rowCount === 0) return null;
+
+      const itemRes = await client.query<{ url: string | null; thumbnail_url: string | null }>(
+        "SELECT url, thumbnail_url FROM album_items WHERE album_id = $1",
+        [id]
+      );
+
+      await client.query("DELETE FROM albums WHERE id = $1", [id]);
+
+      return [
+        albumRes.rows[0].cover_url,
+        ...itemRes.rows.flatMap((row) => [row.url, row.thumbnail_url]),
+      ];
+    });
+
+    if (!urls) {
       return notFound("Album not found");
     }
 
     invalidateDataCache();
+    await releaseUploadsFor(urls);
     return success(await fetchAlbums());
   } catch (e) {
     return serverError(e, "Failed to delete album");

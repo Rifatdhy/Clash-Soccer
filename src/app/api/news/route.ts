@@ -5,6 +5,10 @@ import { buildUpdate } from "@/lib/sql";
 import { isUniqueViolation } from "@/lib/pg-errors";
 import { isAllowedImageUrl } from "@/lib/validation";
 import {
+  releaseUploadsFor,
+  releaseReplacedUploads,
+} from "@/lib/storage-cleanup-server";
+import {
   badRequest,
   conflict,
   created,
@@ -105,12 +109,25 @@ export async function PUT(req: Request) {
     }
 
     try {
+      // Read the old cover before the update so a replaced image can be
+      // cleaned up afterwards.
+      const previous = await query<{ cover_image: string | null }>(
+        "SELECT cover_image FROM news WHERE id = $1",
+        [id]
+      );
+
       const res = await query(plan.text, plan.values);
       if (res.rowCount === 0) {
         return notFound("News item not found");
       }
 
       invalidateDataCache();
+      // Only a cover the request actually set can replace the old one; a
+      // partial update that leaves the field alone must not touch the file.
+      await releaseReplacedUploads(
+        [previous.rows[0]?.cover_image],
+        ["coverImage" in updates ? updates.coverImage : previous.rows[0]?.cover_image]
+      );
       return success(await fetchNews());
     } catch (e) {
       if (isUniqueViolation(e)) {
@@ -134,12 +151,18 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    const res = await query("DELETE FROM news WHERE id = $1", [validation.data.id]);
-    if (res.rowCount === 0) {
+    // Read the image URLs before the row disappears: afterwards there is
+    // nothing left to tell us which uploads belonged to this item.
+    const deleted = await query<{ cover_image: string | null }>(
+      "DELETE FROM news WHERE id = $1 RETURNING cover_image",
+      [validation.data.id]
+    );
+    if (deleted.rowCount === 0) {
       return notFound("News item not found");
     }
 
     invalidateDataCache();
+    await releaseUploadsFor([deleted.rows[0].cover_image]);
     return success(await fetchNews());
   } catch (e) {
     return serverError(e, "Failed to delete news item");

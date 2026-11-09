@@ -3,6 +3,7 @@ import { z } from "zod";
 import { query } from "@/lib/db";
 import { fetchAlbum, invalidateDataCache } from "@/lib/data";
 import { isAllowedImageUrl, isHttpUrl } from "@/lib/validation";
+import { releaseUploadsFor } from "@/lib/storage-cleanup-server";
 import {
   badRequest,
   created,
@@ -92,8 +93,12 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    const itemRes = await query<{ album_id: string }>(
-      "DELETE FROM album_items WHERE id = $1 RETURNING album_id",
+    const itemRes = await query<{
+      album_id: string;
+      url: string | null;
+      thumbnail_url: string | null;
+    }>(
+      "DELETE FROM album_items WHERE id = $1 RETURNING album_id, url, thumbnail_url",
       [validation.data.id]
     );
     if (itemRes.rowCount === 0) {
@@ -101,6 +106,8 @@ export async function DELETE(req: Request) {
     }
 
     invalidateDataCache();
+    await releaseUploadsFor([itemRes.rows[0].url, itemRes.rows[0].thumbnail_url]);
+
     const album = await fetchAlbum(itemRes.rows[0].album_id);
     if (!album) return notFound("Album not found");
     return success(album);
