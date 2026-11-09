@@ -11,29 +11,26 @@ import { InstagramIcon } from "@/components/icons";
  */
 export default function Footer({ settings }: { settings: Setting }) {
   return (
-    <footer className="border-t border-border bg-charcoal">
+    <footer className="bg-ink border-t border-ink-line">
       <div className="mx-auto max-w-7xl px-4 py-16 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
-            <Link href="/" className="flex items-center gap-2 md:gap-3">
+            <Link href="/">
               <Image
-                src="/logo.png"
-                alt="Clash Soccer Logo"
-                width={1024}
-                height={1536}
-                className="h-7 w-auto md:h-8 object-contain"
+                src="/logo-mark.png"
+                alt="Clash Soccer"
+                width={807}
+                height={262}
+                className="h-7 w-auto"
               />
-              <span className="text-lg md:text-xl font-bold tracking-tight text-primary-text font-display">
-                CLASH.<span className="text-secondary-text">SOCCER</span>
-              </span>
             </Link>
-            <p className="mt-4 text-sm text-secondary-text leading-relaxed max-w-xs">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-bone-dim">
               {settings.description}
             </p>
           </div>
 
           <div>
-            <h4 className="text-xs font-medium uppercase tracking-[0.2em] text-secondary-text mb-4">
+            <h4 className="font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim mb-4">
               Navigate
             </h4>
             <div className="flex flex-col gap-3">
@@ -41,7 +38,7 @@ export default function Footer({ settings }: { settings: Setting }) {
                 <Link
                   key={item}
                   href={`/${item.toLowerCase()}`}
-                  className="text-sm text-secondary-text hover:text-primary-text transition-colors"
+                  className="text-sm text-bone-dim hover:text-bone transition-colors"
                 >
                   {item}
                 </Link>
@@ -50,7 +47,7 @@ export default function Footer({ settings }: { settings: Setting }) {
           </div>
 
           <div>
-            <h4 className="text-xs font-medium uppercase tracking-[0.2em] text-secondary-text mb-4">
+            <h4 className="font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim mb-4">
               Connect
             </h4>
             <div className="flex flex-col gap-3">
@@ -59,7 +56,7 @@ export default function Footer({ settings }: { settings: Setting }) {
                   href={`https://wa.me/${settings.whatsapp}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-secondary-text hover:text-primary-text transition-colors"
+                  className="flex items-center gap-2 text-sm text-bone-dim hover:text-bone transition-colors"
                 >
                   <MessageCircle size={16} />
                   WhatsApp
@@ -70,7 +67,7 @@ export default function Footer({ settings }: { settings: Setting }) {
                   href={`https://instagram.com/${settings.instagram}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-secondary-text hover:text-primary-text transition-colors"
+                  className="flex items-center gap-2 text-sm text-bone-dim hover:text-bone transition-colors"
                 >
                   <InstagramIcon size={16} />
                   Instagram
@@ -80,11 +77,11 @@ export default function Footer({ settings }: { settings: Setting }) {
           </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-secondary-text">
+        <div className="mt-16 pt-8 border-t border-ink-line flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-bone-dim">
             &copy; {new Date().getFullYear()} Clash.Soccer. All rights reserved.
           </p>
-          <p className="text-xs text-secondary-text">
+          <p className="text-xs text-bone-dim">
             Less talk. More football.
           </p>
         </div>

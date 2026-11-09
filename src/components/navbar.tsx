@@ -40,23 +40,20 @@ export default function Navbar() {
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
           scrolled || !isHome
-            ? "bg-charcoal/95 backdrop-blur-md border-b border-border"
+            ? "bg-ink/95 backdrop-blur-sm border-b border-ink-line"
             : "bg-transparent"
         )}
       >
         <div className="mx-auto max-w-7xl px-4">
           <div className="flex items-center justify-between h-16 md:h-20">
-            <Link href="/" className="flex items-center gap-2 md:gap-3">
-              <Image 
-                src="/logo.png" 
-                alt="Clash Soccer Logo" 
-                width={1024} 
-                height={1536} 
-                className="h-7 w-auto md:h-10 object-contain" 
+            <Link href="/">
+              <Image
+                src="/logo-mark.png"
+                alt="Clash Soccer"
+                width={807}
+                height={262}
+                className="h-7 w-auto md:h-8"
               />
-              <span className="text-base md:text-lg font-bold tracking-tight text-primary-text font-display">
-                CLASH.<span className="text-secondary-text">SOCCER</span>
-              </span>
             </Link>
 
             <div className="hidden md:flex items-center gap-8">
@@ -65,10 +62,10 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "text-sm tracking-wider uppercase font-display transition-colors duration-300",
+                    "font-condensed text-sm uppercase tracking-[0.14em] transition-colors duration-300",
                     pathname === link.href
-                      ? "text-accent"
-                      : "text-secondary-text hover:text-primary-text"
+                      ? "text-bone border-b-2 border-crest pb-1"
+                      : "text-bone-dim hover:text-bone"
                   )}
                 >
                   {link.label}
@@ -78,10 +75,16 @@ export default function Navbar() {
 
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden text-primary-text p-2"
-              aria-label="Toggle menu"
+              className="md:hidden text-bone p-3"
+              aria-label="Menu"
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
             >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileOpen ? (
+                <X size={24} aria-hidden="true" />
+              ) : (
+                <Menu size={24} aria-hidden="true" />
+              )}
             </button>
           </div>
         </div>
@@ -90,32 +93,22 @@ export default function Navbar() {
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
+            id="mobile-menu"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-charcoal/98 backdrop-blur-2xl md:hidden"
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-40 bg-ink md:hidden"
           >
-            <div className="flex flex-col items-center justify-center h-full gap-10">
-              {links.map((link, i) => (
-                <motion.div
+            <div className="flex h-full flex-col items-center justify-center gap-10">
+              {links.map((link) => (
+                <Link
                   key={link.href}
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: i * 0.08, ease: [0.32, 0.72, 0, 1] }}
+                  href={link.href}
+                  className="font-statement text-3xl text-bone py-3"
                 >
-                  <Link
-                    href={link.href}
-                    className={cn(
-                      "text-3xl font-bold tracking-tight transition-colors",
-                      pathname === link.href
-                        ? "text-accent"
-                        : "text-secondary-text hover:text-primary-text"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                </motion.div>
+                  {link.label}
+                </Link>
               ))}
             </div>
           </motion.div>
