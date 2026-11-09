@@ -101,6 +101,8 @@ lewat `GET /api/health` (200 sehat, 503 bila database atau config bermasalah).
 | `npm run db:migrate -- --status` | Tampilkan versi yang sudah diterapkan. |
 | `npm run db:init` | Alias lama untuk `db:migrate`. |
 | `npm run smoke:db` | Smoke test end-to-end RSVP ke database (exit 2 bila `DATABASE_URL` kosong). |
+| `npm run seed:demo` | Isi database dengan konten demo (jadwal, RSVP, galeri, berita, FAQ, settings). |
+| `npm run seed:demo -- --reset` | Hapus data demo lalu isi ulang. |
 | `npm run hash-password` | Cetak `ADMIN_PASSWORD_HASH` dari env `ADMIN_PASSWORD` (atau argumen). |
 | `npx tsc --noEmit` | Type check. |
 
@@ -115,6 +117,28 @@ mengubah file lama.
 menambahkan indeks dan tabel `rate_limits`. `scripts/migrate.mjs` juga membaca
 `.env.local`/`.env` agar bisa dijalankan tanpa shell khusus.
 
+## Data Demo
+
+`npm run seed:demo` mengisi database dengan konten contoh supaya situs tidak
+terlihat kosong saat diperiksa manual: 7 pertandingan (termasuk satu yang
+sedang berlangsung), RSVP pemain, 3 album galeri berisi 18 foto, 5 berita,
+6 FAQ, dan settings (logo, banner, deskripsi, WhatsApp, alamat).
+
+```bash
+npm run seed:demo            # aman diulang: baris yang sudah ada dilewati
+npm run seed:demo -- --reset # hapus data demo lebih dulu, lalu isi ulang
+```
+
+Semua baris memakai prefix id `demo-`, jadi `--reset` hanya menghapus data
+demo dan tidak menyentuh data asli. Tanggal dihitung relatif terhadap hari ini
+sehingga demo tidak pernah terlihat basi.
+
+Gambar diunduh sekali dari Unsplash lalu disimpan lewat storage driver yang
+sedang aktif (`STORAGE_DRIVER`), bukan di-hotlink. Hasilnya URL di database
+selalu `/api/uploads/demo/...`, tetap tampil saat offline, dan lolos validasi
+URL gambar milik admin. Cache unduhan ada di `.data/demo-images/`; keduanya
+masuk `.gitignore`, jadi data demo tidak ikut ter-commit.
+
 ## Testing
 
 ```bash
@@ -124,7 +148,7 @@ npx tsc --noEmit
 npm run build
 
 # Integration (butuh database terpisah/nyata)
-$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/clash_soccer"
+$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/clash_soccer_test"
 npm run test:integration
 
 # E2E
