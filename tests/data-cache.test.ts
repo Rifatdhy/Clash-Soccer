@@ -82,3 +82,33 @@ test("pruneCache runs automatically on write once the store is large", () => {
     `store should be pruned on write, still holds ${store.size}`
   );
 });
+
+test("live entries cannot grow the store past the threshold either", () => {
+  // The previous test only proved that *expired* entries are swept, and every
+  // key it wrote had a negative ttl. A crawler hitting /api/news?slug=<random>
+  // writes entries that are still valid for 30s, so sweeping expired keys
+  // alone leaves the store unbounded. The cap has to hold for live entries.
+  clearCache();
+  for (let i = 0; i < CACHE_PRUNE_THRESHOLD * 4; i += 1) {
+    writeCache(`news:slug-${i}`, { i }, 30_000);
+  }
+
+  const store = (globalThis as Record<string, unknown>)[CACHE_STORE_KEY] as Map<string, unknown>;
+  assert.ok(
+    store.size <= CACHE_PRUNE_THRESHOLD,
+    `store should stay capped, still holds ${store.size}`
+  );
+});
+
+test("pruning live entries drops the oldest writes first", () => {
+  clearCache();
+  for (let i = 0; i < CACHE_PRUNE_THRESHOLD + 50; i += 1) {
+    writeCache(`k${i}`, i, 30_000);
+  }
+
+  // The most recent write must survive: it is the one a reader is most likely
+  // to ask for next.
+  assert.equal(readCache(`k${CACHE_PRUNE_THRESHOLD + 49}`), CACHE_PRUNE_THRESHOLD + 49);
+  // The very first writes are the ones evicted.
+  assert.equal(readCache("k0"), undefined);
+});
