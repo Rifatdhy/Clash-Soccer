@@ -4,6 +4,7 @@ import { fetchNews, fetchNewsBySlug, invalidateDataCache } from "@/lib/data";
 import { buildUpdate } from "@/lib/sql";
 import { isUniqueViolation } from "@/lib/pg-errors";
 import { isAllowedImageUrl } from "@/lib/validation";
+import { newsInputSchema } from "@/lib/content-schema";
 import {
   releaseUploadsFor,
   releaseReplacedUploads,
@@ -21,23 +22,28 @@ import {
 
 // --- Zod Schemas for Validation ---
 
-const baseNewsSchema = z.object({
-  id: z.string().trim().min(1, "ID is required"),
-  title: z.string().trim().min(1, "Title is required"),
-  slug: z
-    .string()
-    .trim()
-    .min(1, "Slug is required")
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be a valid URL slug"),
-  content: z.string().trim().min(1, "Content is required"),
-  excerpt: z.string().trim().optional().or(z.literal("")),
-  coverImage: z
-    .string()
-    .trim()
-    .refine(isAllowedImageUrl, "Invalid image URL")
-    .optional(),
-  date: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid date"),
-});
+const baseNewsSchema = z
+  .object({
+    id: z.string().trim().min(1, "ID is required"),
+    title: z
+      .string()
+      .trim()
+      .min(1, "Title is required")
+      .max(255, "Title must be 255 characters or less"),
+    slug: z
+      .string()
+      .trim()
+      .min(1, "Slug is required")
+      .max(255, "Slug must be 255 characters or less")
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be a valid URL slug"),
+    coverImage: z
+      .string()
+      .trim()
+      .refine(isAllowedImageUrl, "Invalid image URL")
+      .optional(),
+    date: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid date"),
+  })
+  .extend(newsInputSchema.shape);
 
 const newsSchema = baseNewsSchema;
 const newsUpdateSchema = baseNewsSchema.partial().required({ id: true });

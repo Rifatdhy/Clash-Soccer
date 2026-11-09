@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { query, withTransaction } from "@/lib/db";
 import { fetchFaqs, invalidateDataCache } from "@/lib/data";
+import { faqInputSchema } from "@/lib/content-schema";
 import { buildUpdate } from "@/lib/sql";
 import {
   badRequest,
@@ -14,15 +15,17 @@ import {
 
 // --- Zod Schemas for Validation ---
 
-const faqSchema = z.object({
-  id: z.string().trim().min(1, "ID is required"),
-  question: z.string().trim(),
-  answer: z.string().trim(),
-});
+const faqSchema = z
+  .object({
+    id: z.string().trim().min(1, "ID is required"),
+  })
+  .extend(faqInputSchema.shape);
 
-const faqUpdateSchema = faqSchema.partial().extend({
-  id: z.string().trim().min(1, "ID is required"),
-});
+const faqUpdateSchema = z
+  .object({
+    id: z.string().trim().min(1, "ID is required"),
+  })
+  .extend(faqInputSchema.partial().shape);
 
 const fieldMapping: Record<string, string> = {
   question: "question",
