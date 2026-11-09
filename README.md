@@ -139,11 +139,21 @@ Integration test di-skip dengan pesan jelas bila `TEST_DATABASE_URL` kosong.
 E2E memakai kredensial admin uji dari `playwright.config.ts`; jangan pakai
 kredensial produksi.
 
+CI (`.github/workflows/ci.yml`) menjalankan tiga job: `verify` (lint, type
+check, unit test, build tanpa database), `integration` (migrasi, integration
+test, `smoke:db`), dan `e2e` (migrasi, Chromium, Playwright). Kegagalan E2E
+mengunggah `playwright-report/` dan `test-results/` sebagai artifact.
+
 ## Arsitektur Singkat
 
 - `src/app/**` berisi route App Router, termasuk route API di `src/app/api/**`.
+- `src/app/layout.tsx` membaca settings di server, jadi deskripsi dan tautan
+  kontak di footer sudah ada di HTML pertama (bukan hasil fetch di browser).
 - `src/lib/data.ts` adalah pintu baca server untuk halaman publik, dengan cache
-  pendek yang diinvalidasi setiap kali ada mutasi.
+  pendek di `src/lib/data-cache.ts`. Cache disimpan di `globalThis` supaya
+  invalidasi dari route API benar-benar mengenai cache yang dibaca halaman.
+- `src/app/sitemap.ts` mendaftar halaman statis ditambah detail berita dan
+  album yang ada di database.
 - `src/lib/rsvp-service.ts` memegang transaksi RSVP; route hanya memvalidasi
   input dan memetakan hasil.
 - `src/lib/rate-limit.ts` memilih store `memory` atau `database` lewat
@@ -167,6 +177,9 @@ kredensial produksi.
 - Rate limit login 5 percobaan/15 menit dan RSVP 20/15 menit per IP.
 - Rahasia (`password`, `token`, `authorization`, `cookie`, `secret`) diredaksi
   dari log.
+- Setiap respons membawa `x-request-id` (dari proxy); error 500 mencatat id yang
+  sama di log sehingga laporan pengguna bisa ditelusuri. Header masuk hanya
+  dipakai bila bentuknya wajar, agar tidak bisa memalsukan baris log.
 
 ## Deployment
 
