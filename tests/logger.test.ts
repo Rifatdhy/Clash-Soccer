@@ -77,3 +77,31 @@ test("the logger exposes only the request id helper that sanitises input", async
   assert.equal("getRequestId" in logger, false);
   assert.equal(typeof logger.resolveRequestId, "function");
 });
+
+test("redact masks participant contact details, not just secrets", () => {
+  // The RSVP route puts duplicate WhatsApp numbers in the 400 response body,
+  // and every 4xx body is written to the log. Those are real phone numbers.
+  const redacted = redact({
+    status: 400,
+    details: { duplicates: ["6281234567890", "628999888777"] },
+    whatsapp: "6281234567890",
+    phone: "6281234567890",
+  }) as Record<string, unknown>;
+
+  const text = JSON.stringify(redacted);
+  assert.doesNotMatch(text, /6281234567890/);
+  assert.doesNotMatch(text, /628999888777/);
+  assert.match(text, /REDACTED/);
+});
+
+test("redact still keeps non-personal context readable", () => {
+  const redacted = redact({
+    status: 400,
+    context: "Failed to create RSVP",
+    matchId: "m1",
+  }) as Record<string, unknown>;
+
+  assert.equal(redacted.status, 400);
+  assert.equal(redacted.context, "Failed to create RSVP");
+  assert.equal(redacted.matchId, "m1");
+});

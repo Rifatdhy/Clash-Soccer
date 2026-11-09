@@ -10,6 +10,20 @@ const SECRET_KEYS = new Set([
   "apikey",
 ]);
 
+/**
+ * Keys whose values are personal contact data rather than secrets. The RSVP
+ * route echoes duplicate WhatsApp numbers in its 400 body and every 4xx body
+ * is logged, so without this the log keeps real phone numbers forever.
+ */
+const PII_KEYS = new Set([
+  "whatsapp",
+  "phone",
+  "telephone",
+  "mobile",
+  "email",
+  "duplicates",
+]);
+
 export function redact(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(redact);
@@ -26,7 +40,12 @@ export function redact(value: unknown): unknown {
   if (value && typeof value === "object") {
     const result: Record<string, unknown> = {};
     for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-      result[key] = SECRET_KEYS.has(key.toLowerCase()) ? "[REDACTED]" : redact(nested);
+      const lowered = key.toLowerCase();
+      if (SECRET_KEYS.has(lowered) || PII_KEYS.has(lowered)) {
+        result[key] = "[REDACTED]";
+        continue;
+      }
+      result[key] = redact(nested);
     }
     return result;
   }
