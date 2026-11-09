@@ -152,6 +152,9 @@ mengunggah `playwright-report/` dan `test-results/` sebagai artifact.
 - `src/lib/data.ts` adalah pintu baca server untuk halaman publik, dengan cache
   pendek di `src/lib/data-cache.ts`. Cache disimpan di `globalThis` supaya
   invalidasi dari route API benar-benar mengenai cache yang dibaca halaman.
+- `src/lib/storage-cleanup.ts` berisi logika murni pembersihan file unggahan
+  (ekstraksi key, pengecekan referensi, penentuan file yang diganti);
+  `storage-cleanup-server.ts` menyambungkannya ke database dan storage nyata.
 - `src/app/sitemap.ts` mendaftar halaman statis ditambah detail berita dan
   album yang ada di database.
 - `src/lib/rsvp-service.ts` memegang transaksi RSVP; route hanya memvalidasi
@@ -173,7 +176,15 @@ mengunggah `playwright-report/` dan `test-results/` sebagai artifact.
 - CSP memakai nonce per request; `script-src` produksi tidak memakai
   `unsafe-inline`.
 - Upload dibatasi 5 MB, allowlist MIME gambar, nama file acak, dan guard path
-  traversal.
+  traversal. `Content-Length` yang sudah melebihi batas ditolak dengan 413
+  sebelum body dibaca, sehingga unggahan besar tidak sempat masuk memori.
+- File unggahan ikut dibersihkan: saat berita, album, atau item album dihapus,
+  atau saat logo/banner/cover diganti, file lama dihapus hanya jika tidak ada
+  baris lain yang masih memakainya. Pembersihan bersifat best-effort dan tidak
+  pernah menggagalkan request yang sudah berhasil.
+- `npm run db:migrate` dan `/api/db-init` memakai advisory lock PostgreSQL yang
+  sama (`4829163`), jadi dua deploy bersamaan tidak menerapkan DDL yang sama
+  dua kali.
 - Rate limit login 5 percobaan/15 menit dan RSVP 20/15 menit per IP.
 - Rahasia (`password`, `token`, `authorization`, `cookie`, `secret`) diredaksi
   dari log.
