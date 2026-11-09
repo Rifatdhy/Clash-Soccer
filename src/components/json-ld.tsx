@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { serializeJsonLd } from "@/lib/seo";
 
 export default async function JsonLd({ data }: { data: Record<string, unknown> }) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
@@ -8,7 +9,7 @@ export default async function JsonLd({ data }: { data: Record<string, unknown> }
       type="application/ld+json"
       nonce={nonce}
       suppressHydrationWarning
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
     />
   );
 }

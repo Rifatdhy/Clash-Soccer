@@ -5,6 +5,7 @@ import {
   buildSportsClubJsonLd,
   buildContentPaths,
   sitemapMetaFor,
+  serializeJsonLd,
 } from "../src/lib/seo.ts";
 
 test("buildSitemapEntries joins paths to the base url", () => {
@@ -78,4 +79,19 @@ test("sitemapMetaFor returns null for paths it does not know", () => {
   assert.equal(sitemapMetaFor("/"), null);
   assert.equal(sitemapMetaFor("/news"), null);
   assert.equal(sitemapMetaFor("/gallery"), null);
+});
+
+test("JSON-LD is serialised so a closing script tag cannot break out", () => {
+  const json = serializeJsonLd({
+    name: "</script><script>alert(1)</script>",
+    description: "ok",
+  });
+
+  assert.doesNotMatch(json, /<\/script>/i);
+  assert.match(json, /\\u003c/);
+});
+
+test("serializeJsonLd keeps ordinary data readable", () => {
+  const json = serializeJsonLd({ "@type": "SportsClub", name: "Clash.Soccer" });
+  assert.deepEqual(JSON.parse(json), { "@type": "SportsClub", name: "Clash.Soccer" });
 });

@@ -72,6 +72,23 @@ export function sitemapMetaFor(
   return null;
 }
 
+/**
+ * Serialise structured data for a `<script type="application/ld+json">` block.
+ *
+ * `JSON.stringify` leaves `</script>` intact, so a value containing it closes
+ * the tag early and the rest of the payload becomes markup. Escaping `<` (and
+ * the other two line separators JSON allows) keeps the data inert; the result
+ * is still valid JSON because these are `\u` escapes.
+ */
+export function serializeJsonLd(data: Record<string, unknown>): string {
+  return JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 export function buildSportsClubJsonLd(input: {
   name: string;
   description: string;
