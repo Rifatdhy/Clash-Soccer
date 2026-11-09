@@ -19,6 +19,9 @@ interface StoryCardProps {
  *
  * The whole card is the link, so the surface is the affordance and the
  * accessible name is the readable headline rather than a chain of fragments.
+ * For the same reason the photo carries `alt=""`: the headline beside it is
+ * the label, so a descriptive alt would make the link announce the title
+ * twice, and the photo adds nothing the text does not already say.
  * The title is an `h3` in both shapes: the pages that host this card already
  * own the single `h1` (via `PageHead`) and any `h2` section headings.
  */
@@ -43,7 +46,7 @@ export function StoryCard({ item, featured = false }: StoryCardProps) {
         {item.coverImage ? (
           <Image
             src={item.coverImage}
-            alt={item.title}
+            alt=""
             fill
             sizes="(max-width: 768px) 100vw, 66vw"
             className="object-cover"

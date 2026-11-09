@@ -20,7 +20,10 @@ interface AlbumTileProps {
  * anchor — `next/link` would try to route it client-side and prefetch a
  * document it cannot render. Otherwise it is an in-app link to the album.
  * The hover zoom hangs off `group` on the link so the image, not the text,
- * carries the hover feedback.
+ * carries the hover feedback — and because the tile is one link whose
+ * accessible name is the concatenation of its text, the photo takes `alt=""`
+ * rather than repeating the heading. The heading also brightens on hover, so
+ * a tile with no cover still answers the pointer.
  */
 export function AlbumTile({ album, aspect = "wide" }: AlbumTileProps) {
   const aspectClass = aspect === "tall" ? "aspect-[3/4]" : "aspect-[4/3]";
@@ -31,7 +34,7 @@ export function AlbumTile({ album, aspect = "wide" }: AlbumTileProps) {
         {album.coverUrl ? (
           <Image
             src={album.coverUrl}
-            alt={album.title}
+            alt=""
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
@@ -40,7 +43,9 @@ export function AlbumTile({ album, aspect = "wide" }: AlbumTileProps) {
           <BrandFallback label="CLASH / MATCH DAY" />
         )}
       </div>
-      <h3 className="mt-4 font-statement text-xl text-bone">{album.title}</h3>
+      <h3 className="mt-4 font-statement text-xl text-bone-dim transition-colors group-hover:text-bone">
+        {album.title}
+      </h3>
       <p className="mt-1 font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim">
         {formatDate(album.matchDate)}
       </p>
