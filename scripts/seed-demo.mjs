@@ -63,27 +63,44 @@ function isoDate(offsetDays) {
 }
 
 // --- Images -----------------------------------------------------------------
-// Each entry is a photo id verified to return a real JPEG. A 404 would store a
-// 29-byte HTML error page as an "image", which is worse than a missing picture.
+// Every entry below was downloaded and LOOKED AT before being added. A photo id
+// says nothing about its subject: the first version of this list quietly shipped
+// a cycling race, a woman against a pink wall, a pile of cocoa beans, a sneaker
+// and a backpack, because those ids came from a generic stock list rather than
+// from football. A 404 is also not the only failure mode - a wrong-subject photo
+// returns a perfectly valid JPEG.
+//
+// If you add an id, open the image first. Then add it here with a label saying
+// what it actually shows, so the next person can re-check without downloading.
 const PHOTOS = [
-  "photo-1517649763962-0c623066013b",
-  "photo-1574629810360-7efbbe195018",
-  "photo-1551958219-acbc608c6377",
-  "photo-1553778263-73a83bab9b0c",
-  "photo-1522778119026-d647f0596c20",
-  "photo-1431324155629-1a6deb1dec8d",
-  "photo-1459865264687-595d652de67e",
-  "photo-1489944440615-453fc2b6a9a9",
-  "photo-1503342217505-b0a15ec3261c",
-  "photo-1493925410384-84f842e616fb",
-  "photo-1560272564-c83b66b1ad12",
-  "photo-1518091043644-c1d4457512c6",
-  "photo-1543326727-cf6c39e8f84c",
-  "photo-1526232761682-d26e03ac148e",
-  "photo-1508609349937-5ec4ae374ebf",
-  "photo-1487466365202-1afdb86c764e",
-  "photo-1556056504-5c7696c4c28d",
-  "photo-1547949003-9792a18a2601",
+  ["photo-1574629810360-7efbbe195018", "ball on grass, boot about to strike"],
+  ["photo-1551958219-acbc608c6377", "three balls in front of a goal"],
+  ["photo-1553778263-73a83bab9b0c", "two players contesting the ball"],
+  ["photo-1522778119026-d647f0596c20", "floodlit stadium, full stand"],
+  ["photo-1431324155629-1a6deb1dec8d", "misty pitch under floodlights"],
+  ["photo-1459865264687-595d652de67e", "touchline paint, close-up"],
+  ["photo-1489944440615-453fc2b6a9a9", "covered stadium interior"],
+  ["photo-1560272564-c83b66b1ad12", "player striking the ball"],
+  ["photo-1518091043644-c1d4457512c6", "trophy beside a ball"],
+  ["photo-1543326727-cf6c39e8f84c", "match duel, two players"],
+  ["photo-1526232761682-d26e03ac148e", "kids at training with a coach"],
+  ["photo-1487466365202-1afdb86c764e", "empty pitch at night"],
+  ["photo-1556056504-5c7696c4c28d", "pitch from above"],
+  ["photo-1606925797300-0b35e9d1794e", "boots and ball, futsal court"],
+  ["photo-1579952363873-27f3bade9f55", "boot resting on a ball"],
+  ["photo-1552318965-6e6be7484ada", "ball in the goal net"],
+  ["photo-1575361204480-aadea25e6e68", "ball on turf"],
+  ["photo-1517927033932-b3d18e61fb3a", "shot at goal at night"],
+  ["photo-1624880357913-a8539238245b", "two players, women's match"],
+  ["photo-1600679472829-3044539ce8ed", "boot controlling a ball"],
+  ["photo-1518604666860-9ed391f76460", "cluster of orange balls"],
+  ["photo-1524015368236-bbf6f72545b6", "boot on a ball, low angle"],
+  ["photo-1486286701208-1d58e9338013", "ball on grass, shallow focus"],
+  ["photo-1517466787929-bc90951d0974", "player mid-kick"],
+  ["photo-1521731978332-9e9e714bdd20", "blue and black ball on turf"],
+  ["photo-1614632537190-23e4146777db", "blue star-pattern ball"],
+  ["photo-1589487391730-58f20eb2c308", "worn ball on artificial grass"],
+  ["photo-1434648957308-5e6a859697e8", "stadium at dusk, play in progress"],
 ];
 
 async function fetchPhoto(id, width) {
@@ -116,7 +133,15 @@ async function storeImage(key, photoId, width = 1200) {
 
 let photoCursor = 0;
 function nextPhoto() {
-  const id = PHOTOS[photoCursor % PHOTOS.length];
+  // No modulo wrap: a short list used to silently repeat photos, which is how
+  // the cycling shot ended up as both an album cover and a gallery item. Running
+  // out is a bug worth failing on, not something to paper over.
+  if (photoCursor >= PHOTOS.length) {
+    throw new Error(
+      `Ran out of photos: the demo needs ${photoCursor + 1}, only ${PHOTOS.length} are listed.`
+    );
+  }
+  const [id] = PHOTOS[photoCursor];
   photoCursor += 1;
   return id;
 }

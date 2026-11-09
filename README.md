@@ -139,6 +139,18 @@ selalu `/api/uploads/demo/...`, tetap tampil saat offline, dan lolos validasi
 URL gambar milik admin. Cache unduhan ada di `.data/demo-images/`; keduanya
 masuk `.gitignore`, jadi data demo tidak ikut ter-commit.
 
+Daftar foto di `scripts/seed-demo.mjs` hanya berisi gambar sepak bola yang
+sudah diperiksa satu per satu, dan setiap entri diberi keterangan isinya.
+Ini bukan formalitas: versi pertama daftar itu memuat balap sepeda, biji
+kakao, sneaker, dan ransel karena id-nya diambil dari daftar stok umum, bukan
+dari hasil pencarian sepak bola. Foto bertema salah tetap berupa JPEG yang
+valid, jadi tidak ada pemeriksaan otomatis yang bisa menangkapnya — hanya
+mata manusia. Menambah foto berarti membuka gambarnya dulu.
+
+Jumlah slot gambar (28) sama dengan jumlah foto, dan `nextPhoto()` sengaja
+gagal bila daftar habis alih-alih mengulang dari awal. Sebelumnya modulo
+membuat foto yang sama muncul sebagai cover album sekaligus item galeri.
+
 ## Testing
 
 ```bash
