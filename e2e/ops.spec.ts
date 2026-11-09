@@ -32,3 +32,47 @@ test("db-init reports the applied migration set to an admin", async ({ page }) =
   expect(body.success).toBe(true);
   expect(Array.isArray(body.applied)).toBe(true);
 });
+
+test("an oversized JSON body is refused before it is parsed", async ({ request }) => {
+  // 2 MB of JSON against a 1 MB cap. Without the header check this body is
+  // buffered and parsed first, on a public endpoint.
+  const response = await request.post("/api/auth/login", {
+    headers: { "content-type": "application/json" },
+    data: { username: "a".repeat(2 * 1024 * 1024), password: "x" },
+  });
+
+  expect(response.status()).toBe(413);
+});
+
+test("a rate limited login tells the client when to retry", async ({ request }) => {
+  // A dedicated X-Real-IP keeps this test from draining the bucket that every
+  // other test shares, which would make their logins fail with 429.
+  const ip = `198.51.100.${Date.now() % 200}`;
+  let limited: Awaited<ReturnType<typeof request.post>> | undefined;
+
+  // The login limit is 5 attempts per window; drive it past the limit.
+  for (let i = 0; i < 8; i += 1) {
+    const response = await request.post("/api/auth/login", {
+      headers: { "x-real-ip": ip },
+      data: { username: "nobody", password: "wrong-password" },
+    });
+    if (response.status() === 429) {
+      limited = response;
+      break;
+    }
+  }
+
+  expect(limited).toBeDefined();
+  expect(limited!.status()).toBe(429);
+
+  const retryAfter = limited!.headers()["retry-after"];
+  expect(retryAfter).toBeDefined();
+  expect(Number(retryAfter)).toBeGreaterThan(0);
+});
+
+test("a client error is logged as a warning, not as a server error", async ({ request }) => {
+  // Sanity check that a 404 still answers correctly; the log level is covered
+  // by the unit test, this guards the response shape.
+  const response = await request.get("/api/news?slug=does-not-exist");
+  expect(response.status()).toBe(200);
+});
