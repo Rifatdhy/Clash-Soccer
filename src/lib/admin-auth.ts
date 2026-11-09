@@ -57,9 +57,14 @@ export async function verifyAdminSessionToken(token?: string) {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for API surface compatibility
-export async function isAdminRequest(request: Request) {
-  // For API routes, we get cookies from the headers
+/**
+ * Admin check for a route handler.
+ *
+ * The cookie is read through `cookies()` because the session lives in an
+ * httpOnly cookie that the proxy already validated. The request argument is
+ * accepted only for call-site symmetry; it is not consulted.
+ */
+export async function isAdminRequest(): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get(STORAGE_KEYS.ADMIN_AUTH_COOKIE)?.value;
   return verifyAdminSessionToken(token);

@@ -5,7 +5,7 @@ import { createLogger } from "@/lib/logger";
 
 const logger = createLogger({ route: "/api/db-init" });
 
-export async function GET(req: Request) {
+export async function GET() {
   // Migrations over HTTP are a development convenience only. In production
   // they run from the deploy pipeline (`npm run db:migrate`), where the
   // advisory lock and console output are available.
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const authError = await requireAdmin(req);
+  const authError = await requireAdmin();
   if (authError) return authError;
 
   try {

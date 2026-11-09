@@ -19,14 +19,20 @@ function timingSafeEqual(a: string, b: string) {
 }
 
 export async function POST(req: Request) {
+  // Rate limit before reading the body: this endpoint is public, so parsing
+  // first would let an unauthenticated caller force a JSON parse on every
+  // attempt, including the ones that should have been rejected outright.
+  const ip = getClientIp(req);
+  const limited = await consume("login", ip);
+  if (!limited.allowed) {
+    return tooManyRequests(
+      "Too many login attempts. Please try again later.",
+      limited.retryAfterMs
+    );
+  }
+
   return validate(req, loginSchema, async (data) => {
     try {
-      const ip = getClientIp(req);
-      const limited = await consume("login", ip);
-      if (!limited.allowed) {
-        return tooManyRequests("Too many login attempts. Please try again later.");
-      }
-
       const { username, password } = data;
 
       const adminUsername = process.env.ADMIN_USERNAME;

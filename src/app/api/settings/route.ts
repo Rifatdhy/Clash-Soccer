@@ -54,7 +54,7 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  const authError = await requireAdmin(req);
+  const authError = await requireAdmin();
   if (authError) return authError;
 
   return validate(req, settingsSchema.partial(), async (data) => {

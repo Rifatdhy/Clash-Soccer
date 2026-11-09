@@ -35,7 +35,7 @@ const deleteRsvpSchema = z.object({
 });
 
 export async function GET(req: Request) {
-  const authError = await requireAdmin(req);
+  const authError = await requireAdmin();
   if (authError) return authError;
 
   try {
@@ -50,7 +50,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const limited = await consume("rsvp", getClientIp(req), RSVP_RATE_LIMIT);
   if (!limited.allowed) {
-    return tooManyRequests("Too many RSVP attempts. Please wait a few minutes.");
+    return tooManyRequests(
+      "Too many RSVP attempts. Please wait a few minutes.",
+      limited.retryAfterMs
+    );
   }
 
   return validate(req, rsvpSchema, async (data) => {
@@ -78,7 +81,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const authError = await requireAdmin(req);
+  const authError = await requireAdmin();
   if (authError) return authError;
 
   const { searchParams } = new URL(req.url);

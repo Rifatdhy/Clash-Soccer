@@ -14,7 +14,7 @@ import {
 } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const authError = await requireAdmin(request);
+  const authError = await requireAdmin();
   if (authError) return authError;
 
   // `formData()` buffers the entire body before any field is inspected, so an

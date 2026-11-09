@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { ZodError, ZodSchema } from "zod";
 import { isAdminRequest } from "@/lib/admin-auth";
 import { createLogger, reportError, resolveRequestId } from "@/lib/logger";
+import { retryAfterSeconds } from "@/lib/retry-after";
+import { exceedsByteLimit, MAX_JSON_BODY_BYTES } from "@/lib/validation";
 
 const logger = createLogger();
 
@@ -40,7 +42,14 @@ export function error(
   details?: unknown,
   requestId?: string
 ): ApiResponse<never> {
-  logger.error(message, { status, details, ...(requestId ? { requestId } : {}) });
+  // A 4xx is the client's mistake, not a server fault. Logging every probe at
+  // `error` level buries real 500s, so those are recorded as warnings instead.
+  if (status >= 500) {
+    logger.error(message, { status, details, ...(requestId ? { requestId } : {}) });
+  } else {
+    logger.warn(message, { status, details, ...(requestId ? { requestId } : {}) });
+  }
+
   const response = NextResponse.json<ErrorResponse>(
     { success: false, error: { message, details }, data: null },
     { status }
@@ -74,15 +83,19 @@ export function conflict(
 
 export function tooManyRequests(
   message: string = "Too many requests. Please try again later.",
-  details?: unknown
+  retryAfterMs?: number | null
 ): ApiResponse<never> {
-  return error(message, 429, details);
+  const response = error(message, 429);
+  const seconds = retryAfterSeconds(retryAfterMs);
+  if (seconds) response.headers.set("Retry-After", seconds);
+  return response;
 }
 
 export function payloadTooLarge(
-  message: string = "Request body is too large"
+  message: string = "Request body is too large",
+  requestId?: string
 ): ApiResponse<never> {
-  return error(message, 413);
+  return error(message, 413, undefined, requestId);
 }
 
 export function serverError(
@@ -96,8 +109,8 @@ export function serverError(
 
 // --- Middleware and Validation ---
 
-export async function requireAdmin(request: Request): Promise<ApiResponse<never> | null> {
-  const isAdmin = await isAdminRequest(request);
+export async function requireAdmin(): Promise<ApiResponse<never> | null> {
+  const isAdmin = await isAdminRequest();
   if (isAdmin) {
     return null; // No error, proceed
   }
@@ -110,6 +123,17 @@ export async function validate<T, U>(
   handler: (data: T) => Promise<ApiResponse<U>>
 ): Promise<ApiResponse<U | never>> {
   const requestId = resolveRequestId(req);
+
+  // `req.json()` buffers whatever the client sent, and route handlers have no
+  // default body limit. Refuse an oversized body from the header first so a
+  // public endpoint cannot be made to allocate an unbounded string.
+  if (exceedsByteLimit(req.headers.get("content-length"), MAX_JSON_BODY_BYTES)) {
+    return payloadTooLarge(
+      `Request body must be at most ${MAX_JSON_BODY_BYTES} bytes`,
+      requestId
+    );
+  }
+
   try {
     const body = await req.json();
     const data = schema.parse(body);

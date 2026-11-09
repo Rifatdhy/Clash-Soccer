@@ -53,7 +53,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const authError = await requireAdmin(req);
+  const authError = await requireAdmin();
   if (authError) return authError;
 
   return validate(req, matchCreateSchema, async (data) => {
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const authError = await requireAdmin(req);
+  const authError = await requireAdmin();
   if (authError) return authError;
 
   return validate(req, matchUpdateSchema, async (data) => {
@@ -133,7 +133,7 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const authError = await requireAdmin(req);
+  const authError = await requireAdmin();
   if (authError) return authError;
 
   const { searchParams } = new URL(req.url);
