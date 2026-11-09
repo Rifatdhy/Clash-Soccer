@@ -28,6 +28,37 @@ export function buildSitemapEntries(
   });
 }
 
+/**
+ * Detail pages that belong in the sitemap. Public list pages are static, but
+ * news articles and albums only exist at runtime, so the sitemap has to be
+ * built from the rows instead of a fixed list.
+ */
+export function buildContentPaths(input: {
+  news: Array<{ slug: string }>;
+  albums: Array<{ id: string }>;
+}): string[] {
+  const seen = new Set<string>();
+  const paths: string[] = [];
+
+  const push = (path: string) => {
+    if (seen.has(path)) return;
+    seen.add(path);
+    paths.push(path);
+  };
+
+  for (const article of input.news) {
+    const slug = article.slug.trim();
+    if (slug) push(`/news/${encodeURIComponent(slug)}`);
+  }
+
+  for (const album of input.albums) {
+    const id = album.id.trim();
+    if (id) push(`/gallery/${encodeURIComponent(id)}`);
+  }
+
+  return paths;
+}
+
 export function buildSportsClubJsonLd(input: {
   name: string;
   description: string;
