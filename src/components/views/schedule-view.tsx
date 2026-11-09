@@ -27,7 +27,7 @@ export default function ScheduleView({
 
       <Section>
         <h2 className="text-2xl font-bold text-primary-text mb-8 tracking-tight font-display uppercase">
-          Upcoming Matches
+          Matches
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {upcomingMatches.length === 0 ? (
