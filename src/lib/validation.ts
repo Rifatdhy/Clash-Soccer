@@ -22,9 +22,15 @@ export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 /**
  * Cap for JSON request bodies. Route handlers have no default limit, so
  * `req.json()` would buffer whatever a client sends. This is generous for the
- * admin forms (the largest is a news article) and still bounded.
+ * admin forms and still bounded.
+ *
+ * It must stay above `MAX_IMAGE_DATA_URL_LENGTH`: when the upload API is
+ * unavailable, `uploadImageFile` falls back to returning a data URL that is
+ * then saved inside a JSON body. A body cap below the image limit would reject
+ * a value the validator explicitly accepts, and the admin would see a 413 with
+ * no way to tell why.
  */
-export const MAX_JSON_BODY_BYTES = 1 * 1024 * 1024;
+export const MAX_JSON_BODY_BYTES = 3 * 1024 * 1024;
 
 /**
  * True when a declared `Content-Length` is larger than `maxBytes`.

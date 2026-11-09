@@ -163,9 +163,11 @@ mengunggah `playwright-report/` dan `test-results/` sebagai artifact.
   `RATE_LIMIT_STORE`. Kegagalan store bersama jatuh ke fallback in-memory agar
   API tidak ikut mati.
 - `src/lib/data-cache.ts` menyimpan cache baca di `globalThis` agar route
-  handler dan page berbagi satu store, dan memangkas entri kedaluwarsa begitu
-  jumlahnya melewati 500 supaya slug berita/galeri yang dibuat crawler tidak
-  menumpuk selamanya.
+  handler dan page berbagi satu store, dan memangkasnya begitu jumlahnya
+  melewati 500. Pemangkasan membuang entri kedaluwarsa lebih dulu, lalu
+  memotong ke 400 entri terbaru, karena slug berita/galeri bisa dibuat siapa
+  saja lewat `?slug=` dan entri yang masih hidup tidak akan pernah tersapu
+  kalau hanya entri kedaluwarsa yang dibuang.
 - `src/lib/storage.ts` memilih driver `local` atau `s3`; SigV4 ditandatangani
   dengan `node:crypto` tanpa SDK.
 - `src/proxy.ts` melindungi `/admin` sekaligus membuat CSP nonce per request.
@@ -182,10 +184,16 @@ mengunggah `playwright-report/` dan `test-results/` sebagai artifact.
 - Upload dibatasi 5 MB, allowlist MIME gambar, nama file acak, dan guard path
   traversal. `Content-Length` yang sudah melebihi batas ditolak dengan 413
   sebelum body dibaca, sehingga unggahan besar tidak sempat masuk memori.
-- Body JSON dibatasi 1 MB (`MAX_JSON_BODY_BYTES`). Route handler Next.js tidak
-  punya batas bawaan, jadi `validate()` menolak body yang terlalu besar lewat
-  header `Content-Length` sebelum `req.json()` memuatnya ke memori. Login
-  melakukan rate limit lebih dulu, baru membaca body.
+- Body JSON dibatasi 3 MB (`MAX_JSON_BODY_BYTES`). Route handler Next.js tidak
+  punya batas bawaan, jadi `validate()` memakai dua lapis: header
+  `Content-Length` ditolak lebih dulu dengan 413 tanpa membaca body, lalu body
+  dibaca lewat `readTextWithinLimit` yang menghitung byte sambil jalan. Lapis
+  kedua ada karena `Content-Length` bersifat opsional — klien yang mengirim
+  body secara streaming memakai `Transfer-Encoding: chunked` dan tidak mengirim
+  panjang sama sekali, sehingga cek header saja bisa dilewati. Batas body
+  sengaja lebih besar dari `MAX_IMAGE_DATA_URL_LENGTH` (2 MB) supaya fallback
+  data URL yang masih diterima validator tidak selalu ditolak transport.
+  Login melakukan rate limit lebih dulu, baru membaca body.
 - File unggahan ikut dibersihkan: saat berita, album, atau item album dihapus,
   atau saat logo/banner/cover diganti, file lama dihapus hanya jika tidak ada
   baris lain yang masih memakainya. Pembersihan bersifat best-effort dan tidak
