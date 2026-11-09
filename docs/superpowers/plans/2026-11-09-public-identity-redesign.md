@@ -486,7 +486,7 @@ git commit -m "feat(design): rebuild schedule as a grouped fixture list"
 
 - [ ] **Step 1: Tulis ulang `gallery/page.tsx`**
 
-Ganti `PageHeader` dengan `<PageHead title="Gallery" subtitle="Dokumentasi setiap momen pertandingan Clash.Soccer." />`. Ganti `<p>Belum ada album.</p>` di baris 26 dengan `<EmptyState title="Belum ada album" description="Dokumentasi pertandingan akan muncul di sini." />`. Grid menjadi `grid grid-cols-1 gap-8 sm:grid-cols-2` dengan `<AlbumTile album={album} aspect={i % 3 === 0 ? "wide" : "tall"} />`.
+Ganti `PageHeader` dengan `<PageHead title="Gallery" subtitle="Dokumentasi setiap momen pertandingan Clash.Soccer." />`. Ganti `<p>Belum ada album.</p>` di baris 26 dengan `<EmptyState title="Belum ada album" description="Dokumentasi pertandingan akan muncul di sini." />`. **Tambahkan satu `h2` di atas grid**, karena `AlbumTile` merender `h3` dan halaman ini hanya punya `h1` dari `PageHead` — tanpa `h2` levelnya melompat (`h1` → `h3`), melanggar aturan aksesibilitas spec. Pakai `<h2 className="mb-8 font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim">Album</h2>`. Grid menjadi `grid grid-cols-1 gap-8 sm:grid-cols-2` dengan `<AlbumTile album={album} aspect={i % 3 === 0 ? "wide" : "tall"} />`.
 
 - [ ] **Step 2: Perbaiki aksesibilitas lightbox**
 
@@ -521,7 +521,7 @@ git commit -m "feat(design): rebuild gallery with cover-cropped tiles"
 
 - [ ] **Step 1: Tulis ulang `news/page.tsx`**
 
-`<PageHead title="News" subtitle="Berita, pengumuman, dan informasi terbaru dari komunitas Clash.Soccer." />`. Kalau `news.length === 0`, `<EmptyState title="Belum ada berita" description="Berita dan pengumuman akan muncul di sini." />`. Kalau ada: `<StoryCard item={news[0]} featured />` lalu sisanya dalam `<div className="mt-10 border-t border-ink-line">` berisi `<StoryCard item={item} />` per item.
+`<PageHead title="News" subtitle="Berita, pengumuman, dan informasi terbaru dari komunitas Clash.Soccer." />`. Kalau `news.length === 0`, `<EmptyState title="Belum ada berita" description="Berita dan pengumuman akan muncul di sini." />`. Kalau ada: `<StoryCard item={news[0]} featured />` lalu sisanya dalam `<div className="mt-10 border-t border-ink-line">` berisi `<StoryCard item={item} />` per item. **Sebelum daftar ringkas itu, tambahkan satu `h2`**, karena `StoryCard` merender `h3` dan halaman ini hanya punya `h1` dari `PageHead` — tanpa `h2` levelnya melompat (`h1` → `h3`). Pakai `<h2 className="mt-16 mb-2 font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim">Berita lainnya</h2>` di atas `div` pembungkus.
 
 - [ ] **Step 2: Tulis ulang header `news-detail-view.tsx`**
 
