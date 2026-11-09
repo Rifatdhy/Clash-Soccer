@@ -7,7 +7,9 @@ import {
   resetRateLimit,
   setRateLimitStore,
   RATE_LIMIT_DEFAULTS,
+  UNKNOWN_CLIENT_IP,
 } from "../src/lib/rate-limit.ts";
+import { retryAfterSeconds } from "../src/lib/retry-after.ts";
 
 test("first attempt is allowed", async () => {
   const result = await consume("login", "1.2.3.4", RATE_LIMIT_DEFAULTS);
@@ -93,4 +95,29 @@ test("consume falls back to memory when the store throws", async () => {
 
   const result = await consume("fallback", "ip", { windowMs: 1000, max: 2 });
   assert.equal(result.allowed, true);
+});
+
+test("retryAfterSeconds rounds up so a client never retries too early", () => {
+  assert.equal(retryAfterSeconds(90_000), "90");
+  assert.equal(retryAfterSeconds(1), "1");
+  assert.equal(retryAfterSeconds(1_001), "2");
+});
+
+test("retryAfterSeconds never returns zero or a negative wait", () => {
+  assert.equal(retryAfterSeconds(0), "1");
+  assert.equal(retryAfterSeconds(-500), "1");
+});
+
+test("retryAfterSeconds returns null when there is no timing to report", () => {
+  assert.equal(retryAfterSeconds(undefined), null);
+  assert.equal(retryAfterSeconds(null), null);
+  assert.equal(retryAfterSeconds(Number.NaN), null);
+});
+
+test("the unknown-address bucket is a named constant, not a magic string", () => {
+  assert.equal(UNKNOWN_CLIENT_IP, "unknown");
+  assert.equal(
+    getClientIp(new Request("http://localhost/api/login")),
+    UNKNOWN_CLIENT_IP
+  );
 });

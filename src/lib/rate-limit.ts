@@ -77,5 +77,33 @@ export function getClientIp(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
 
-  return "unknown";
+  warnMissingClientIp();
+  return UNKNOWN_CLIENT_IP;
 }
+
+let warnedMissingClientIp = false;
+
+/**
+ * Every request without an address shares one bucket, so a burst of failures
+ * locks out every user. That is a deployment problem (the proxy is not setting
+ * `X-Real-IP`), and the only way an operator finds out is if it is said once,
+ * loudly, in the log.
+ */
+function warnMissingClientIp(): void {
+  if (warnedMissingClientIp) return;
+  warnedMissingClientIp = true;
+  logger.warn(
+    "No client IP header found; all rate limited requests share one bucket. Set X-Real-IP at the proxy."
+  );
+}
+
+/**
+ * Bucket used when no proxy header identifies the caller.
+ *
+ * Without an address every client shares one bucket, so a burst of failures
+ * locks everyone out. That is still the right failure mode — a per-request
+ * bucket would silently disable the limit entirely — but it means a deployment
+ * behind a proxy must set `X-Real-IP`. `getClientIp` warns once in the log when
+ * that is missing.
+ */
+export const UNKNOWN_CLIENT_IP = "unknown";
