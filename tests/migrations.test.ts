@@ -1,10 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  invalidMigrationFiles,
-  parseMigrationFileName,
-  selectPendingMigrations,
-} from "../src/lib/migrations.ts";
+import { invalidMigrationFiles, MIGRATION_LOCK_ID, parseMigrationFileName, selectPendingMigrations, withMigrationLock } from "../src/lib/migrations.ts";
 
 test("parseMigrationFileName accepts numbered sql files", () => {
   assert.deepEqual(parseMigrationFileName("0001_init.sql"), {
@@ -46,4 +42,64 @@ test("selectPendingMigrations returns unapplied files in order", () => {
 test("selectPendingMigrations ignores already applied and invalid files", () => {
   const pending = selectPendingMigrations(["0001_a.sql", "notes.txt"], ["0001"]);
   assert.deepEqual(pending, []);
+});
+
+test("MIGRATION_LOCK_ID is the one constant both runners share", () => {
+  assert.equal(MIGRATION_LOCK_ID, 4829163);
+});
+
+test("withMigrationLock takes the lock before the work and releases it after", async () => {
+  const calls: string[] = [];
+  const client = {
+    query: async (text: string) => {
+      calls.push(text);
+      return { rows: [] };
+    },
+  };
+
+  const result = await withMigrationLock(client, async () => {
+    calls.push("work");
+    return "done";
+  });
+
+  assert.equal(result, "done");
+  assert.equal(calls.length, 3);
+  assert.match(calls[0], /pg_advisory_lock/);
+  assert.equal(calls[1], "work");
+  assert.match(calls[2], /pg_advisory_unlock/);
+});
+
+test("withMigrationLock releases the lock when the work throws", async () => {
+  const calls: string[] = [];
+  const client = {
+    query: async (text: string) => {
+      calls.push(text);
+      return { rows: [] };
+    },
+  };
+
+  await assert.rejects(
+    withMigrationLock(client, async () => {
+      throw new Error("boom");
+    }),
+    /boom/
+  );
+
+  assert.match(calls[calls.length - 1], /pg_advisory_unlock/);
+});
+
+test("a failing unlock does not hide the original error", async () => {
+  const client = {
+    query: async (text: string) => {
+      if (text.includes("unlock")) throw new Error("unlock failed");
+      return { rows: [] };
+    },
+  };
+
+  await assert.rejects(
+    withMigrationLock(client, async () => {
+      throw new Error("boom");
+    }),
+    /boom/
+  );
 });

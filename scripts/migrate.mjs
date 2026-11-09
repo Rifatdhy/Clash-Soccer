@@ -5,6 +5,7 @@ import pg from "pg";
 import {
   invalidMigrationFiles,
   selectPendingMigrations,
+  withMigrationLock,
 } from "../src/lib/migrations.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -60,67 +61,66 @@ if (invalid.length > 0) {
   process.exit(1);
 }
 
-const MIGRATION_LOCK_ID = 4829163;
-
 const client = new pg.Client({ connectionString, ssl });
 await client.connect();
 
 try {
-  // Two instances deploying at once must not apply the same DDL twice.
-  await client.query("SELECT pg_advisory_lock($1)", [MIGRATION_LOCK_ID]);
+  // Two instances deploying at once must not apply the same DDL twice. The
+  // lock id lives in `src/lib/migrations.ts` so the HTTP entry point
+  // (`/api/db-init`) takes exactly the same lock.
+  await withMigrationLock(client, async () => {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
 
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      version TEXT PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  `);
+    const appliedResult = await client.query(
+      "SELECT version, applied_at FROM schema_migrations ORDER BY version"
+    );
+    const applied = appliedResult.rows.map((row) => row.version);
 
-  const appliedResult = await client.query(
-    "SELECT version, applied_at FROM schema_migrations ORDER BY version"
-  );
-  const applied = appliedResult.rows.map((row) => row.version);
+    const pending = selectPendingMigrations(files, applied);
 
-  const pending = selectPendingMigrations(files, applied);
-
-  if (statusOnly) {
-    if (appliedResult.rows.length === 0) {
-      console.log("No migrations applied.");
-    } else {
-      for (const row of appliedResult.rows) {
-        console.log(`Applied ${row.version} at ${row.applied_at.toISOString()}`);
+    if (statusOnly) {
+      if (appliedResult.rows.length === 0) {
+        console.log("No migrations applied.");
+      } else {
+        for (const row of appliedResult.rows) {
+          console.log(`Applied ${row.version} at ${row.applied_at.toISOString()}`);
+        }
       }
-    }
-  } else if (dryRun) {
-    if (pending.length === 0) {
+    } else if (dryRun) {
+      if (pending.length === 0) {
+        console.log("No pending migrations.");
+      } else {
+        for (const migration of pending) {
+          console.log(`Pending ${migration.version}_${migration.name}`);
+        }
+      }
+    } else if (pending.length === 0) {
       console.log("No pending migrations.");
     } else {
       for (const migration of pending) {
-        console.log(`Pending ${migration.version}_${migration.name}`);
+        const fileName = `${migration.version}_${migration.name}.sql`;
+        const sql = readFileSync(join(migrationsDir, fileName), "utf8");
+        await client.query("BEGIN");
+        try {
+          await client.query(sql);
+          await client.query("INSERT INTO schema_migrations (version) VALUES ($1)", [
+            migration.version,
+          ]);
+          await client.query("COMMIT");
+          console.log(`Applied ${fileName}`);
+        } catch (error) {
+          await client.query("ROLLBACK");
+          throw error;
+        }
       }
+      console.log(`Applied ${pending.length} migration(s).`);
     }
-  } else if (pending.length === 0) {
-    console.log("No pending migrations.");
-  } else {
-    for (const migration of pending) {
-      const fileName = `${migration.version}_${migration.name}.sql`;
-      const sql = readFileSync(join(migrationsDir, fileName), "utf8");
-      await client.query("BEGIN");
-      try {
-        await client.query(sql);
-        await client.query("INSERT INTO schema_migrations (version) VALUES ($1)", [
-          migration.version,
-        ]);
-        await client.query("COMMIT");
-        console.log(`Applied ${fileName}`);
-      } catch (error) {
-        await client.query("ROLLBACK");
-        throw error;
-      }
-    }
-    console.log(`Applied ${pending.length} migration(s).`);
-  }
+  });
 } finally {
-  await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK_ID]).catch(() => {});
   await client.end();
 }
