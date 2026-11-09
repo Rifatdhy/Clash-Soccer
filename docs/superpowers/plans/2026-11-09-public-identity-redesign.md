@@ -197,7 +197,8 @@ test("slotStatus menandai slot penuh", () => {
 
 test("slotStatus menandai slot menipis di bawah 25 persen", () => {
   assert.equal(slotStatus(3, 20).state, "low");
-  assert.equal(slotStatus(4, 20).state, "open");
+  assert.equal(slotStatus(4, 20).state, "low");
+  assert.equal(slotStatus(5, 20).state, "open");
 });
 
 test("slotStatus tidak membagi nol saat slotsTotal nol", () => {
@@ -231,7 +232,7 @@ Ekspor kelima fungsi dengan signature di Interfaces. `monthLabel` memakai array 
 - [ ] **Step 4: Jalankan test untuk memastikan lolos**
 
 Run: `node --test tests/schedule-layout.test.ts`
-Expected: PASS, 8 test.
+Expected: PASS, 10 test (8 dari brief plus 2 yang mengunci pembulatan `percent` dan `monthKey`).
 
 - [ ] **Step 5: Commit**
 
@@ -646,7 +647,7 @@ Kalau tidak ada hasil, hapus kedua baris itu dari `@theme inline`. Kalau masih a
 - [ ] **Step 4: Jalankan seluruh verifikasi**
 
 Run: `npx tsc --noEmit && npm run lint && npm test && npm run build`
-Expected: keempatnya lolos. `npm test` harus 167 test lama plus 8 test baru = 175 test lulus.
+Expected: keempatnya lolos. `npm test` harus 177 test lulus (167 lama + 10 baru dari Task 3).
 
 - [ ] **Step 5: Jalankan E2E penuh**
 
