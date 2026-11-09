@@ -6,9 +6,9 @@
  * month, labels those groups, and shows how many places are left in each one;
  * doing that inside a server component would mean every rule could only be
  * checked by starting a database and rendering a page. Keeping the maths here
- * lets `node --test` pin the behaviour directly, including the edge cases that
- * used to break the page — an empty schedule, a match with no places left, and
- * a fixture list shared through a cache that must never be mutated in place.
+ * lets `node --test` pin the behaviour directly, including the awkward cases: an
+ * empty schedule, a fixture with no places left, a fixture with no places at all,
+ * and a cached fixture list that must never be mutated in place.
  */
 
 const MONTH_NAMES = [
@@ -55,10 +55,14 @@ export function monthLabel(date: string): string {
 /**
  * Group matches into month buckets, preserving the order they arrived in.
  *
- * One pass over the input keeps the caller's ordering (the query already sorts
- * by date) and avoids the trap of a `Map` keyed by month plus a second sort that
- * could reorder matches inside a month. An empty list yields no groups, so the
- * page can render "no fixtures" instead of an empty heading.
+ * Grouping is by adjacency: a match joins the last bucket when its key matches,
+ * otherwise it opens a new one. That is what keeps the caller's order intact and
+ * makes this a single pass. It does assume the input is already ordered by date —
+ * the query sorts by date, so a month's matches are contiguous. Unsorted input
+ * such as Nov, Dec, Nov would produce "November" twice rather than one bucket.
+ *
+ * An empty list yields no groups, so the page can render "no fixtures" instead
+ * of an empty heading.
  */
 export function groupMatchesByMonth<T extends { date: string }>(
   matches: T[]
@@ -79,10 +83,11 @@ export function groupMatchesByMonth<T extends { date: string }>(
 /**
  * Describe how full a fixture's slots are.
  *
- * `slotsTotal` of zero used to divide by zero and render `NaN%`; a fixture that
- * takes no sign-ups is treated as full instead. The remaining checks run in
- * order so that "no places left" always wins over the percentage, and "low"
- * starts below a quarter of the places rather than at the last seat.
+ * A fixture with `slotsTotal` of 0 would divide by zero and render `NaN%`, so it
+ * is treated as full instead. The remaining checks run in order so that "no
+ * places left" always wins over the percentage, and "low" starts below a quarter
+ * of the places rather than at the last seat. The percentage is rounded, not
+ * truncated, so 1 of 3 places reads as 33% rather than 33.33…%.
  */
 export function slotStatus(
   slotsAvailable: number,
