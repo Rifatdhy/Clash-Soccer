@@ -62,6 +62,19 @@ export function getRequestId(request: Request): string {
   return request.headers.get("x-request-id")?.trim() || randomUUID();
 }
 
+const SAFE_REQUEST_ID = /^[A-Za-z0-9._:-]{1,128}$/;
+
+/**
+ * Request id used for log correlation. An inbound `x-request-id` is kept only
+ * when it looks like an id: anything with whitespace or an unreasonable
+ * length is replaced so a crafted header cannot forge or split log lines.
+ */
+export function resolveRequestId(request: Request): string {
+  const inbound = request.headers.get("x-request-id")?.trim();
+  if (inbound && SAFE_REQUEST_ID.test(inbound)) return inbound;
+  return randomUUID();
+}
+
 function sendToSentry(error: unknown, context: LogContext): void {
   const dsn = process.env.SENTRY_DSN?.trim();
   if (!dsn) return;

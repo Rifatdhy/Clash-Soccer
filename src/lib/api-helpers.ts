@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError, ZodSchema } from "zod";
 import { isAdminRequest } from "@/lib/admin-auth";
-import { createLogger, reportError } from "@/lib/logger";
+import { createLogger, reportError, resolveRequestId } from "@/lib/logger";
 
 const logger = createLogger();
 
@@ -37,13 +37,16 @@ export function created<T>(data: T): ApiResponse<T> {
 export function error(
   message: string,
   status: number = 500,
-  details?: unknown
+  details?: unknown,
+  requestId?: string
 ): ApiResponse<never> {
-  logger.error(message, { status, details });
-  return NextResponse.json(
+  logger.error(message, { status, details, ...(requestId ? { requestId } : {}) });
+  const response = NextResponse.json<ErrorResponse>(
     { success: false, error: { message, details }, data: null },
     { status }
   );
+  if (requestId) response.headers.set("x-request-id", requestId);
+  return response;
 }
 
 export function badRequest(
@@ -78,10 +81,11 @@ export function tooManyRequests(
 
 export function serverError(
   err: unknown,
-  context: string = "An unexpected error occurred"
+  context: string = "An unexpected error occurred",
+  requestId?: string
 ): ApiResponse<never> {
-  reportError(err, { context });
-  return error("Internal Server Error", 500);
+  reportError(err, { context, ...(requestId ? { requestId } : {}) });
+  return error("Internal Server Error", 500, undefined, requestId);
 }
 
 // --- Middleware and Validation ---
@@ -99,6 +103,7 @@ export async function validate<T, U>(
   schema: ZodSchema<T>,
   handler: (data: T) => Promise<ApiResponse<U>>
 ): Promise<ApiResponse<U | never>> {
+  const requestId = resolveRequestId(req);
   try {
     const body = await req.json();
     const data = schema.parse(body);
@@ -111,6 +116,6 @@ export async function validate<T, U>(
     if (e instanceof SyntaxError) {
       return badRequest("Malformed JSON in request body");
     }
-    return serverError(e, "Error during validation");
+    return serverError(e, "Error during validation", requestId);
   }
 }

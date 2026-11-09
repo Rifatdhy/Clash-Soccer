@@ -3,14 +3,17 @@ import type { NextRequest } from "next/server";
 import { verifyAdminSessionToken } from "@/lib/admin-auth";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { buildCsp, createNonce } from "@/lib/csp";
+import { resolveRequestId } from "@/lib/logger";
 
 export async function proxy(request: NextRequest) {
   const nonce = createNonce();
   const isDev = process.env.NODE_ENV === "development";
   const csp = buildCsp(nonce, isDev);
+  const requestId = resolveRequestId(request);
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("x-request-id", requestId);
   requestHeaders.set("Content-Security-Policy", csp);
 
   const { pathname } = request.nextUrl;
@@ -24,12 +27,14 @@ export async function proxy(request: NextRequest) {
       loginUrl.searchParams.set("unauthorized", "true");
       const response = NextResponse.redirect(loginUrl);
       response.headers.set("Content-Security-Policy", csp);
+      response.headers.set("x-request-id", requestId);
       return response;
     }
   }
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("x-request-id", requestId);
   return response;
 }
 
