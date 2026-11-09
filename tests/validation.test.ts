@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  exceedsByteLimit,
+  MAX_JSON_BODY_BYTES,
+  MAX_UPLOAD_BYTES,
   isAllowedImageUrl,
   isDataImageUrl,
   isHttpUrl,
@@ -82,4 +85,22 @@ test("a javascript URL is replaced with the fallback", () => {
 
 test("missing destination uses the fallback", () => {
   assert.equal(sanitizeNextPath(null, "/admin"), "/admin");
+});
+
+test("exceedsByteLimit compares a declared length against a cap", () => {
+  assert.equal(exceedsByteLimit("101", 100), true);
+  assert.equal(exceedsByteLimit("100", 100), false);
+  assert.equal(exceedsByteLimit("99", 100), false);
+});
+
+test("exceedsByteLimit ignores a missing or nonsense header", () => {
+  assert.equal(exceedsByteLimit(null, 100), false);
+  assert.equal(exceedsByteLimit("", 100), false);
+  assert.equal(exceedsByteLimit("abc", 100), false);
+  assert.equal(exceedsByteLimit("-1", 100), false);
+});
+
+test("a JSON body cap exists and is smaller than the upload cap", () => {
+  assert.ok(MAX_JSON_BODY_BYTES > 0);
+  assert.ok(MAX_JSON_BODY_BYTES <= MAX_UPLOAD_BYTES);
 });

@@ -20,6 +20,29 @@ export const MAX_IMAGE_DATA_URL_LENGTH = 2_000_000;
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 /**
+ * Cap for JSON request bodies. Route handlers have no default limit, so
+ * `req.json()` would buffer whatever a client sends. This is generous for the
+ * admin forms (the largest is a news article) and still bounded.
+ */
+export const MAX_JSON_BODY_BYTES = 1 * 1024 * 1024;
+
+/**
+ * True when a declared `Content-Length` is larger than `maxBytes`.
+ *
+ * A missing or unparseable header returns false: the request still gets
+ * validated, and a proxy that strips the header must not break the API.
+ */
+export function exceedsByteLimit(
+  contentLength: string | null,
+  maxBytes: number
+): boolean {
+  if (contentLength === null) return false;
+  const declared = Number(contentLength.trim());
+  if (!Number.isFinite(declared) || declared <= 0) return false;
+  return declared > maxBytes;
+}
+
+/**
  * `Content-Length` covers the whole multipart envelope, not just the file, so
  * it needs headroom over `MAX_UPLOAD_BYTES` or a legal 5 MB image would be
  * rejected on the header check alone.
@@ -35,10 +58,7 @@ export const MAX_UPLOAD_BODY_BYTES = MAX_UPLOAD_BYTES + 1024 * 1024;
  * runs, and a proxy that strips the header must not break uploads.
  */
 export function declaresOversizedBody(contentLength: string | null): boolean {
-  if (contentLength === null) return false;
-  const declared = Number(contentLength.trim());
-  if (!Number.isFinite(declared) || declared <= 0) return false;
-  return declared > MAX_UPLOAD_BODY_BYTES;
+  return exceedsByteLimit(contentLength, MAX_UPLOAD_BODY_BYTES);
 }
 
 export const ALLOWED_IMAGE_TYPES = [
