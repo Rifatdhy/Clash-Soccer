@@ -3,6 +3,14 @@ export interface WhatsAppHolder {
   phone?: string;
 }
 
+/**
+ * RSVPs only make sense before kick-off. `ongoing` and `completed` matches keep
+ * their attendance history but must not accept new registrations.
+ */
+export function isRsvpOpen(status: "upcoming" | "ongoing" | "completed"): boolean {
+  return status === "upcoming";
+}
+
 export function normalizeWhatsApp(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (digits.startsWith("0")) return `62${digits.slice(1)}`;

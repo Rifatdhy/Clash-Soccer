@@ -27,6 +27,17 @@ async function insertMatch(slotsTotal: number, slotsAvailable: number) {
   return id;
 }
 
+async function insertMatchWithStatus(status: "upcoming" | "ongoing" | "completed") {
+  const { query } = await import("../../src/lib/db.ts");
+  const id = uniqueId("test-match");
+  await query(
+    `INSERT INTO matches (id, title, date, time, location, slots_total, slots_available, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [id, "Status Match", "2026-01-01", "10:00", "Lapangan", 10, 10, status]
+  );
+  return id;
+}
+
 async function getSlots(matchId: string) {
   const { query } = await import("../../src/lib/db.ts");
   const { rows } = await query<{ slots_available: number }>(
@@ -120,6 +131,38 @@ test("deleteRsvp restores slots and reports a missing id", { skip }, async () =>
     assert.deepEqual(await deleteRsvp(created.id), { kind: "ok" });
     assert.equal(await getSlots(matchId), 10);
     assert.deepEqual(await deleteRsvp(created.id), { kind: "not_found" });
+  } finally {
+    await cleanup(matchId);
+  }
+});
+
+test("createRsvp rejects a completed match without changing slots", { skip }, async () => {
+  const { createRsvp } = await import("../../src/lib/rsvp-service.ts");
+  const matchId = await insertMatchWithStatus("completed");
+
+  try {
+    const result = await createRsvp({
+      matchId,
+      participants: [participant("6281234567897")],
+    });
+    assert.equal(result.kind, "closed");
+    assert.equal(await getSlots(matchId), 10);
+  } finally {
+    await cleanup(matchId);
+  }
+});
+
+test("createRsvp rejects an ongoing match without changing slots", { skip }, async () => {
+  const { createRsvp } = await import("../../src/lib/rsvp-service.ts");
+  const matchId = await insertMatchWithStatus("ongoing");
+
+  try {
+    const result = await createRsvp({
+      matchId,
+      participants: [participant("6281234567898")],
+    });
+    assert.equal(result.kind, "closed");
+    assert.equal(await getSlots(matchId), 10);
   } finally {
     await cleanup(matchId);
   }
