@@ -4,11 +4,15 @@
  * A `Content-Length` check is only advisory: a client that streams its body
  * sends `Transfer-Encoding: chunked` and no length at all, so the header guard
  * in `validate()` cannot see the size. Without this the cap is trivially
- * bypassed and `req.json()` still buffers everything.
+ * bypassed and `req.json()` / `request.formData()` still buffer everything.
  *
  * Reading incrementally and giving up as soon as the running total exceeds the
  * cap keeps memory bounded even for a body that never ends.
  */
+
+export type BodyBytesResult =
+  | { ok: true; bytes: Uint8Array }
+  | { ok: false; bytes: number };
 
 export type BodyReadResult =
   | { ok: true; text: string }
@@ -16,11 +20,11 @@ export type BodyReadResult =
 
 const decoder = new TextDecoder();
 
-export async function readTextWithinLimit(
+export async function readBytesWithinLimit(
   body: ReadableStream<Uint8Array> | null,
   maxBytes: number
-): Promise<BodyReadResult> {
-  if (!body) return { ok: true, text: "" };
+): Promise<BodyBytesResult> {
+  if (!body) return { ok: true, bytes: new Uint8Array(0) };
 
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
@@ -52,5 +56,14 @@ export async function readTextWithinLimit(
     offset += chunk.byteLength;
   }
 
-  return { ok: true, text: decoder.decode(merged) };
+  return { ok: true, bytes: merged };
+}
+
+export async function readTextWithinLimit(
+  body: ReadableStream<Uint8Array> | null,
+  maxBytes: number
+): Promise<BodyReadResult> {
+  const result = await readBytesWithinLimit(body, maxBytes);
+  if (!result.ok) return result;
+  return { ok: true, text: decoder.decode(result.bytes) };
 }

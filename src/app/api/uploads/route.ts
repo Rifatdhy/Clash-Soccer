@@ -7,9 +7,11 @@ import {
   serverError,
 } from "@/lib/api-helpers";
 import { putObject } from "@/lib/storage";
+import { readBytesWithinLimit } from "@/lib/body-limit";
 import {
   declaresOversizedBody,
   identifyImage,
+  MAX_UPLOAD_BODY_BYTES,
   MAX_UPLOAD_BYTES,
 } from "@/lib/validation";
 
@@ -18,14 +20,33 @@ export async function POST(request: Request) {
   if (authError) return authError;
 
   // `formData()` buffers the entire body before any field is inspected, so an
-  // oversized upload has to be refused from the header. The file size check
-  // below still runs: the header can be absent or lie.
+  // oversized upload has to be refused from the header. The header can be
+  // absent (chunked uploads) or lie, so the body is also counted while it is
+  // read below.
   if (declaresOversizedBody(request.headers.get("content-length"))) {
     return payloadTooLarge(`File must be at most ${MAX_UPLOAD_BYTES} bytes`);
   }
 
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!contentType.startsWith("multipart/form-data")) {
+    return badRequest("Expected multipart/form-data");
+  }
+
   try {
-    const form = await request.formData();
+    const limited = await readBytesWithinLimit(request.body, MAX_UPLOAD_BODY_BYTES);
+    if (!limited.ok) {
+      return payloadTooLarge(`File must be at most ${MAX_UPLOAD_BYTES} bytes`);
+    }
+    if (limited.bytes.byteLength === 0) {
+      return badRequest("File is required");
+    }
+
+    // The body is already fully in memory and under the cap; parsing it here
+    // instead of calling `request.formData()` means a chunked request cannot
+    // grow without limit before the cap is applied.
+    const form = await new Response(new Uint8Array(limited.bytes), {
+      headers: { "content-type": contentType },
+    }).formData();
     const file = form.get("file");
 
     if (!(file instanceof File)) {
