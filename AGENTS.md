@@ -118,5 +118,5 @@ npm run test:integration
 - `data-cache.ts` stores cache on `globalThis` — not module-level — because Next.js route handlers and pages are separate module graphs that otherwise get separate Maps.
 - Cache prunes at 500 entries (hard cap 400) to prevent unbounded growth from arbitrary `?slug=` crawling.
 - `src/lib/rsvp-service.ts` uses `SELECT ... FOR UPDATE` on the match row to serialize concurrent RSVP submissions — do not remove without replacing with an equivalent lock.
-- The upload endpoint validates MIME from `file.type` (browser-supplied) only; no magic-byte check exists yet.
+- The upload endpoint identifies images by their leading bytes, not `file.type`, then decodes and re-encodes them with `sharp` (`src/lib/image-normalize.ts`) so trailing payloads and embedded metadata never reach storage. Keep the upload route on the Node runtime; `sharp` does not run on Edge.
 - Google Maps embed URL in settings is validated to start with `https://www.google.com/` — anything else is rejected.

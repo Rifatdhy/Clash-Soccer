@@ -8,6 +8,7 @@ import {
 } from "@/lib/api-helpers";
 import { putObject } from "@/lib/storage";
 import { readBytesWithinLimit } from "@/lib/body-limit";
+import { normalizeImage } from "@/lib/image-normalize";
 import {
   declaresOversizedBody,
   identifyImage,
@@ -59,19 +60,30 @@ export async function POST(request: Request) {
       return payloadTooLarge(`File must be at most ${MAX_UPLOAD_BYTES} bytes`);
     }
 
-    // The extension and the stored content type both come from the bytes, not
-    // from `file.type`. A client can claim `image/png` for an HTML or SVG
-    // payload; sniffing means the filename can never disagree with the content.
+    // The extension, the content type, and the stored bytes all come from the
+    // file itself. `file.type` is attacker-controlled, and a valid image can
+    // carry a second payload glued after its image data, so the bytes are
+    // decoded and re-encoded before they are stored.
     const body = new Uint8Array(await file.arrayBuffer());
     const image = identifyImage(body);
     if (!image) {
       return badRequest("File is not a supported image");
     }
 
+    let normalized: Uint8Array;
+    try {
+      normalized = await normalizeImage(body, image.mime);
+    } catch {
+      return badRequest("File is not a readable image");
+    }
+    if (normalized.byteLength > MAX_UPLOAD_BYTES) {
+      return payloadTooLarge(`File must be at most ${MAX_UPLOAD_BYTES} bytes`);
+    }
+
     const key = `${randomUUID()}.${image.extension}`;
     const { url } = await putObject({
       key,
-      body,
+      body: normalized,
       contentType: image.mime,
     });
 
