@@ -8,6 +8,7 @@ import { ArrowLeft, X, Play, ExternalLink } from "lucide-react";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import { formatDate } from "@/lib/format";
+import { videoItemHref } from "@/lib/gallery-links";
 import type { Album } from "@/types";
 import { BrandFallback } from "@/components/content-state";
 
@@ -30,29 +31,40 @@ export default function AlbumDetailView({ album }: { album: Album }) {
         </Link>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {album.items.map((item, i) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: i * 0.05, ease: [0.32, 0.72, 0, 1] }}
-              className="aspect-[4/3] bg-elevated border border-border overflow-hidden cursor-pointer group relative"
-              onClick={() => item.type === "image" && item.url && setLightbox(item.url)}
-            >
-              {item.url && item.type === "image" ? (
-                <Image src={item.url} alt="" fill sizes="(min-width: 1024px) 25vw, 50vw" className="object-cover group-hover:opacity-80 transition-opacity" />
-              ) : (
-                <BrandFallback label="CLASH / FRAME" />
-              )}
-              {item.type === "video" && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-14 h-14 border-2 border-accent rounded-full flex items-center justify-center">
-                    <Play size={20} className="text-accent ml-1" />
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          ))}
+          {album.items.map((item, i) => {
+            const videoHref = videoItemHref(item);
+
+            return (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, delay: i * 0.05, ease: [0.32, 0.72, 0, 1] }}
+                className="aspect-[4/3] bg-elevated border border-border overflow-hidden cursor-pointer group relative"
+                onClick={() => item.type === "image" && item.url && setLightbox(item.url)}
+              >
+                {item.url && item.type === "image" ? (
+                  <Image src={item.url} alt="" fill sizes="(min-width: 1024px) 25vw, 50vw" className="object-cover group-hover:opacity-80 transition-opacity" />
+                ) : (
+                  <BrandFallback label="CLASH / FRAME" />
+                )}
+                {videoHref && (
+                  <a
+                    href={videoHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Putar video: ${album.title}`}
+                    onClick={(event) => event.stopPropagation()}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <span className="w-14 h-14 border-2 border-accent rounded-full flex items-center justify-center">
+                      <Play size={20} className="text-accent ml-1" />
+                    </span>
+                  </a>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
 
         {album.gdriveLink && (

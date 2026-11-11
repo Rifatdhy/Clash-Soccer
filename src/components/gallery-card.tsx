@@ -6,6 +6,7 @@ import { Play, ExternalLink } from "lucide-react";
 import Card from "./card";
 import { type Album } from "@/types";
 import { formatDate } from "@/lib/format";
+import { albumDetailHref } from "@/lib/gallery-links";
 import Image from "next/image";
 import { BrandFallback } from "./content-state";
 
@@ -64,15 +65,7 @@ export default function GalleryCard({ album, index = 0 }: GalleryCardProps) {
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1, ease: [0.32, 0.72, 0, 1] }}
     >
-      {album.gdriveLink ? (
-        <a href={album.gdriveLink} target="_blank" rel="noopener noreferrer">
-          {CardContent}
-        </a>
-      ) : (
-        <Link href={`/gallery/${album.id}`}>
-          {CardContent}
-        </Link>
-      )}
+      <Link href={albumDetailHref(album)}>{CardContent}</Link>
     </motion.div>
   );
 }
