@@ -54,7 +54,7 @@ Tambahkan helper transaction pada layer database yang mengambil satu client dari
 
 ### Authentication configuration
 
-`ADMIN_AUTH_SECRET` wajib tersedia pada environment non-test. Tidak ada secret default yang tertanam di source. Dokumentasi environment diperbarui melalui `.env.example`.
+`ADMIN_AUTH_SECRET` wajib tersedia di production; proses menolak membuat sesi admin tanpa nilai tersebut. Di luar production, source memakai kunci fallback yang jelas berlabel dan mencatat peringatan sekali agar `npm run dev` dan E2E tetap bisa jalan. Fallback itu tidak boleh dipakai untuk staging atau production. Dokumentasi environment diperbarui melalui `.env.example`.
 
 ### Async UI states
 

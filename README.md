@@ -68,7 +68,7 @@ untuk env dan script terbaru.
 | `ADMIN_USERNAME` | Ya | Username admin. |
 | `ADMIN_PASSWORD_HASH` | Salah satu | Hash scrypt dari `npm run hash-password` (baca env `ADMIN_PASSWORD`). |
 | `ADMIN_PASSWORD` | Salah satu | Fallback plaintext; hanya dipakai bila hash kosong. |
-| `ADMIN_AUTH_SECRET` | Ya | Minimal 32 karakter acak untuk menandatangani JWT. |
+| `ADMIN_AUTH_SECRET` | Ya | Minimal 32 karakter acak untuk menandatangani JWT. Di production server menolak membuat sesi bila kosong; di dev nilai kosong memakai kunci fallback dengan peringatan log. |
 | `SITE_URL` | Ya | URL absolut situs, dipakai metadata, sitemap, robots, dan JSON-LD. |
 | `TEST_DATABASE_URL` | Tidak | Database untuk `npm run test:integration`; test di-skip bila kosong. |
 | `RATE_LIMIT_STORE` | Tidak | `memory` (default) atau `database` untuk banyak instance. |
