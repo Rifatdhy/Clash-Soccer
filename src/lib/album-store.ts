@@ -5,11 +5,6 @@ export function getAlbums(): Promise<Album[]> {
   return api.get<Album[]>("/api/albums");
 }
 
-export async function getAlbumById(id: string): Promise<Album | undefined> {
-  const albums = await api.get<Album[]>(`/api/albums?id=${encodeURIComponent(id)}`);
-  return albums[0];
-}
-
 export function createAlbum(
   album: Omit<Album, "items"> & { items?: AlbumItem[] }
 ): Promise<Album[]> {

@@ -19,14 +19,12 @@ export default function AdminSettings() {
     getSettings()
       .then(setSettings)
       .catch((err) => {
-        console.error("Failed to load settings:", err);
         setError(err instanceof Error ? err.message : "Gagal memuat pengaturan.");
       });
 
     getFaqs()
       .then(setFaqList)
       .catch((err) => {
-        console.error("Failed to load FAQs:", err);
         setError(err instanceof Error ? err.message : "Gagal memuat FAQ.");
         setFaqList([]);
       });

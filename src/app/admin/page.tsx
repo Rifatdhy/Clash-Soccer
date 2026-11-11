@@ -16,6 +16,7 @@ export default function AdminDashboard() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [rsvps, setRsvps] = useState<RsvpEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -30,8 +31,10 @@ export default function AdminDashboard() {
         setNews(newsData);
         setAlbumCount(albumsData.length);
         setRsvps(rsvpsData);
-      } catch (error) {
-        console.error("Error fetching admin data:", error);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Gagal memuat ringkasan dashboard."
+        );
       } finally {
         setLoading(false);
       }
@@ -47,16 +50,10 @@ export default function AdminDashboard() {
     );
   }
 
-  const totalParticipants = rsvps.reduce((sum, r) => {
-    try {
-      const participants = typeof r.participants === 'string' 
-        ? JSON.parse(r.participants) 
-        : r.participants;
-      return sum + (Array.isArray(participants) ? participants.length : 0);
-    } catch {
-      return sum;
-    }
-  }, 0);
+  const totalParticipants = rsvps.reduce(
+    (sum, r) => sum + r.participants.length,
+    0
+  );
 
   const stats = [
     {
@@ -97,6 +94,12 @@ export default function AdminDashboard() {
           </p>
         </div>
       </div>
+
+      {error && (
+        <div role="alert" className="p-4 border border-red-500/20 bg-red-500/10 text-sm text-red-400">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 md:gap-4">
         {stats.map((stat, i) => (

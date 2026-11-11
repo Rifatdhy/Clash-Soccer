@@ -59,14 +59,6 @@ export function formatRelativeTime(dateStr: string): string {
 }
 
 /**
- * Truncate text to max length with ellipsis
- */
-export function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength).trimEnd() + "...";
-}
-
-/**
  * Generate URL-safe slug from text
  */
 export function slugify(text: string): string {
@@ -76,12 +68,4 @@ export function slugify(text: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .trim();
-}
-
-/**
- * Generate random ID
- */
-export function generateId(prefix: string = ""): string {
-  const id = Math.random().toString(36).substring(2, 9);
-  return prefix ? `${prefix}_${id}` : id;
 }

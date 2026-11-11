@@ -73,17 +73,6 @@ export interface RsvpEntry {
   createdAt: string;
 }
 
-// Badge types
-export type BadgeVariant = "default" | "success" | "warning" | "danger";
-
-// API Response types
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
 // Database row types (snake_case from PostgreSQL)
 export interface MatchRow {
   id: string;
@@ -139,10 +128,3 @@ export interface FaqRow {
   answer: string;
 }
 
-export interface RsvpRow {
-  id: string;
-  match_id: string;
-  participant_name: string;
-  participant_phone: string;
-  created_at: string;
-}

@@ -46,7 +46,7 @@ export default function Navbar() {
       >
         <div className="mx-auto max-w-7xl px-4">
           <div className="flex items-center justify-between h-16 md:h-20">
-            <Link href="/">
+            <Link href="/" className="inline-flex items-center py-2">
               <Image
                 src="/logo-mark.png"
                 alt="Clash Soccer"

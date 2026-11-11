@@ -25,8 +25,7 @@ export default function AdminGallery() {
   useEffect(() => {
     getAlbums()
       .then(setAlbumList)
-      .catch((err) => {
-        console.error("Failed to load albums:", err);
+      .catch(() => {
         setError("Gagal memuat album.");
       })
       .finally(() => setLoading(false));

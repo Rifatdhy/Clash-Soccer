@@ -4,7 +4,7 @@
 
 ## Prasyarat
 
-- Node.js 20+ (lihat `.nvmrc`)
+- Node.js 24 (lihat `.nvmrc`)
 - PostgreSQL 15+
 
 ## Setup Lokal
@@ -24,11 +24,18 @@ Edit `.env.local`:
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/clash_soccer
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=ganti-dengan-password-kuat
+ADMIN_PASSWORD_HASH=<hasil npm run hash-password>
 ADMIN_AUTH_SECRET=ganti-dengan-string-acak-panjang
 ```
 
 Generate secret acak: `openssl rand -base64 48`
+
+Buat hash password admin (lebih aman daripada plaintext):
+
+```bash
+$env:ADMIN_PASSWORD="password-kuat"; npm run hash-password
+# tempel hasilnya ke ADMIN_PASSWORD_HASH
+```
 
 ### Step 3: Buat Database
 ```bash
@@ -61,7 +68,7 @@ Buka http://localhost:3000 — semua fitur (public + admin) berfungsi penuh.
 3. Buat database di Neon/Supabase, salin connection string
 4. Set environment variables di Vercel:
    - `DATABASE_URL` (dari Neon/Supabase, biasanya sudah `?sslmode=require`)
-   - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_AUTH_SECRET`
+   - `ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH` (atau `ADMIN_PASSWORD`), `ADMIN_AUTH_SECRET`, `SITE_URL`
 5. Jalankan `npm run db:migrate` dengan env produksi (secara lokal dengan DATABASE_URL produksi). Migrasi lewat HTTP (`/api/db-init`) dinonaktifkan di produksi.
 
 ### Opsi B: VPS
@@ -140,7 +147,8 @@ clash-soccer/
 │   ├── lib/              # Utilities, stores & DB helpers
 │   └── proxy.ts          # Route protection (/admin)
 ├── public/               # Static assets
-├── scripts/              # CLI scripts (init-db)
+├── scripts/              # CLI scripts (migrate, seed, smoke)
+├── migrations/           # SQL migration files (NNNN_name.sql)
 ├── .env.local            # Environment variables (create this)
 └── package.json          # Dependencies
 ```

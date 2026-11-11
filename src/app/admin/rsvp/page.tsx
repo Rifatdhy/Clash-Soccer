@@ -28,8 +28,7 @@ export default function AdminRSVP() {
       const [rsvps, matchList] = await Promise.all([getAllRsvp(), getMatches()]);
       setAllRsvp(rsvps);
       setMatches(matchList);
-    } catch (err) {
-      console.error("Error loading RSVP data:", err);
+    } catch {
       setError("Gagal memuat data RSVP.");
     } finally {
       setLoading(false);
@@ -93,8 +92,7 @@ export default function AdminRSVP() {
     try {
       await deleteRsvp(rsvp.id);
       setAllRsvp((current) => current.filter((item) => item.id !== rsvp.id));
-    } catch (error) {
-      console.error(error);
+    } catch {
       setError("Gagal menghapus RSVP. Silakan coba lagi.");
     } finally {
       setDeletingId(null);

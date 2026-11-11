@@ -8,14 +8,10 @@ const SRC = join(ROOT, "src");
 
 /**
  * Server-side modules must log through `createLogger` so lines are JSON and
- * secrets are redacted. `logger.ts` is the sink itself; `rsvp-store.ts` is a
- * browser module (it calls `fetch("/api/rsvps")`), and `logger.ts` imports
+ * secrets are redacted. `logger.ts` is the sink itself; it imports
  * `node:crypto`, so it cannot be shared with the client bundle.
  */
-const ALLOWED = new Set([
-  join("src", "lib", "logger.ts"),
-  join("src", "lib", "rsvp-store.ts"),
-]);
+const ALLOWED = new Set([join("src", "lib", "logger.ts")]);
 
 const CONSOLE_CALL = /\bconsole\s*\.\s*(log|error|warn|info|debug|trace)\s*\(/;
 

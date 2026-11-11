@@ -1,5 +1,3 @@
-import { STORAGE_KEYS } from "./constants";
-
 export async function isAuthenticated(): Promise<boolean> {
   const response = await fetch('/api/auth/status');
   if (!response.ok) {
@@ -11,8 +9,6 @@ export async function isAuthenticated(): Promise<boolean> {
 
 export async function logout(): Promise<void> {
   await fetch('/api/auth/logout', { method: 'POST' });
-  // Also delete the cookie on the client side
-  document.cookie = `${STORAGE_KEYS.ADMIN_AUTH_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 }
 
 export async function login(username: string, password: string): Promise<{ success: boolean; error?: string }> {

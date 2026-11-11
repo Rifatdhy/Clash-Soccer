@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Plus, Edit3, Trash2, X, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 import Card from "@/components/card";
-import { formatDate } from "@/lib/format";
+import { formatDate, slugify } from "@/lib/format";
 import type { NewsItem } from "@/types";
 import { getNews, createNews, updateNews, deleteNews } from "@/lib/news-store";
 import { uploadImageFile } from "@/lib/upload-image";
@@ -28,8 +28,7 @@ export default function AdminNews() {
     try {
       const news = await getNews();
       setNewsList(news);
-    } catch (err) {
-      console.error("Error loading news:", err);
+    } catch {
       setError("Gagal memuat daftar berita.");
     } finally {
       setLoading(false);
@@ -80,14 +79,7 @@ export default function AdminNews() {
       return;
     }
 
-    const slug =
-      form.slug.trim() ||
-      form.title
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-]/g, "")
-        .replace(/-+/g, "-");
+    const slug = form.slug.trim() || slugify(form.title);
 
     try {
       if (editing) {
@@ -104,7 +96,6 @@ export default function AdminNews() {
       await loadNews();
       setModalOpen(false);
     } catch (err) {
-      console.error("Error saving news:", err);
       setError(err instanceof Error ? err.message : "Gagal menyimpan berita.");
     }
   }
@@ -114,8 +105,7 @@ export default function AdminNews() {
     try {
       await deleteNews(id);
       await loadNews();
-    } catch (err) {
-      console.error("Error deleting news:", err);
+    } catch {
       setError("Gagal menghapus berita. Silakan coba lagi.");
     }
   }

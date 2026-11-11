@@ -15,7 +15,7 @@ export default function Footer({ settings }: { settings: Setting }) {
       <div className="mx-auto max-w-7xl px-4 py-16 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
-            <Link href="/">
+            <Link href="/" className="inline-flex items-center py-2">
               <Image
                 src="/logo-mark.png"
                 alt="Clash Soccer"
@@ -30,9 +30,9 @@ export default function Footer({ settings }: { settings: Setting }) {
           </div>
 
           <div>
-            <h4 className="font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim mb-4">
+            <h2 className="font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim mb-4">
               Navigate
-            </h4>
+            </h2>
             <div className="flex flex-col gap-3">
               {["Schedule", "Gallery", "News", "FAQ", "Contact"].map((item) => (
                 <Link
@@ -47,9 +47,9 @@ export default function Footer({ settings }: { settings: Setting }) {
           </div>
 
           <div>
-            <h4 className="font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim mb-4">
+            <h2 className="font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim mb-4">
               Connect
-            </h4>
+            </h2>
             <div className="flex flex-col gap-3">
               {settings.whatsapp && (
                 <a

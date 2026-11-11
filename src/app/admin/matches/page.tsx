@@ -33,8 +33,7 @@ export default function AdminMatches() {
     try {
       const matches = await getMatches();
       setMatchList(matches);
-    } catch (err) {
-      console.error("Error loading matches:", err);
+    } catch {
       setError("Gagal memuat daftar match.");
     } finally {
       setLoading(false);
@@ -84,7 +83,6 @@ export default function AdminMatches() {
       await loadMatches();
       setModalOpen(false);
     } catch (err) {
-      console.error("Error saving match:", err);
       setError(
         err instanceof Error
           ? err.message
@@ -98,8 +96,7 @@ export default function AdminMatches() {
     try {
       await deleteMatch(id);
       await loadMatches();
-    } catch (err) {
-      console.error("Error deleting match:", err);
+    } catch {
       setError("Gagal menghapus match. Silakan coba lagi.");
     }
   }
