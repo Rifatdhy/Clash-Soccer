@@ -9,7 +9,7 @@ import {
 import { putObject } from "@/lib/storage";
 import {
   declaresOversizedBody,
-  extensionForMime,
+  identifyImage,
   MAX_UPLOAD_BYTES,
 } from "@/lib/validation";
 
@@ -38,14 +38,21 @@ export async function POST(request: Request) {
       return payloadTooLarge(`File must be at most ${MAX_UPLOAD_BYTES} bytes`);
     }
 
-    const extension = extensionForMime(file.type);
-    if (!extension) {
-      return badRequest("Unsupported image type");
+    // The extension and the stored content type both come from the bytes, not
+    // from `file.type`. A client can claim `image/png` for an HTML or SVG
+    // payload; sniffing means the filename can never disagree with the content.
+    const body = new Uint8Array(await file.arrayBuffer());
+    const image = identifyImage(body);
+    if (!image) {
+      return badRequest("File is not a supported image");
     }
 
-    const body = new Uint8Array(await file.arrayBuffer());
-    const key = `${randomUUID()}.${extension}`;
-    const { url } = await putObject({ key, body, contentType: file.type });
+    const key = `${randomUUID()}.${image.extension}`;
+    const { url } = await putObject({
+      key,
+      body,
+      contentType: image.mime,
+    });
 
     return created({ url });
   } catch (error) {

@@ -85,6 +85,52 @@ export function extensionForMime(mime: string): string | null {
   return MIME_EXTENSIONS[mime] ?? null;
 }
 
+export type ImageMime = (typeof ALLOWED_IMAGE_TYPES)[number];
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const JPEG_SIGNATURE = [0xff, 0xd8, 0xff];
+// "RIFF" + 4 size bytes + "WEBP"
+const RIFF_SIGNATURE = [0x52, 0x49, 0x46, 0x46];
+const WEBP_SIGNATURE = [0x57, 0x45, 0x42, 0x50];
+
+function matchesAt(bytes: Uint8Array, signature: number[], offset: number): boolean {
+  if (bytes.length < offset + signature.length) return false;
+  return signature.every((byte, index) => bytes[offset + index] === byte);
+}
+
+/**
+ * Identify an image from its leading bytes instead of the browser-supplied
+ * `File.type`, which is attacker-controlled. Returns null for anything that is
+ * not a PNG, JPEG, GIF, or WebP file, including truncated and disguised
+ * payloads.
+ */
+export function identifyImage(
+  bytes: Uint8Array
+): { mime: ImageMime; extension: string } | null {
+  let mime: ImageMime | null = null;
+
+  if (matchesAt(bytes, PNG_SIGNATURE, 0)) {
+    mime = "image/png";
+  } else if (matchesAt(bytes, JPEG_SIGNATURE, 0)) {
+    mime = "image/jpeg";
+  } else if (
+    matchesAt(bytes, [...new TextEncoder().encode("GIF87a")], 0) ||
+    matchesAt(bytes, [...new TextEncoder().encode("GIF89a")], 0)
+  ) {
+    mime = "image/gif";
+  } else if (
+    matchesAt(bytes, RIFF_SIGNATURE, 0) &&
+    matchesAt(bytes, WEBP_SIGNATURE, 8)
+  ) {
+    mime = "image/webp";
+  }
+
+  if (!mime) return null;
+
+  const extension = extensionForMime(mime);
+  return extension ? { mime, extension } : null;
+}
+
 export function isDataImageUrl(value: string): boolean {
   return DATA_IMAGE_PATTERN.test(value);
 }
