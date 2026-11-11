@@ -8,27 +8,12 @@ export const ALLOWED_IMAGE_HOSTS = [
   "images.unsplash.com",
 ] as const;
 
-const DATA_IMAGE_PATTERN = /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i;
-
-/**
- * Hard cap for browser-compressed uploads. The admin UI compresses to well
- * below this; the server rejects anything larger so a crafted request cannot
- * store an unbounded blob.
- */
-export const MAX_IMAGE_DATA_URL_LENGTH = 2_000_000;
-
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 /**
  * Cap for JSON request bodies. Route handlers have no default limit, so
  * `req.json()` would buffer whatever a client sends. This is generous for the
  * admin forms and still bounded.
- *
- * It must stay above `MAX_IMAGE_DATA_URL_LENGTH`: when the upload API is
- * unavailable, `uploadImageFile` falls back to returning a data URL that is
- * then saved inside a JSON body. A body cap below the image limit would reject
- * a value the validator explicitly accepts, and the admin would see a 413 with
- * no way to tell why.
  */
 export const MAX_JSON_BODY_BYTES = 3 * 1024 * 1024;
 
@@ -131,10 +116,6 @@ export function identifyImage(
   return extension ? { mime, extension } : null;
 }
 
-export function isDataImageUrl(value: string): boolean {
-  return DATA_IMAGE_PATTERN.test(value);
-}
-
 /** Video and outbound links are not restricted to the image hosts. */
 export function isHttpUrl(value: string): boolean {
   try {
@@ -146,8 +127,9 @@ export function isHttpUrl(value: string): boolean {
 }
 
 /**
- * Images may be uploaded (data URL) or hosted on a configured host.
- * Empty string is allowed because all image fields are optional.
+ * Images must be stored uploads or come from a configured host. Empty string is
+ * allowed because all image fields are optional. Data URLs are rejected: they
+ * used to be a silent fallback that put megabytes of base64 in the database.
  */
 export function isAllowedImageUrl(value: string): boolean {
   const trimmed = value.trim();
@@ -156,10 +138,6 @@ export function isAllowedImageUrl(value: string): boolean {
   if (trimmed.startsWith("/api/uploads/")) {
     const key = trimmed.slice("/api/uploads/".length);
     return key.length > 0 && !key.includes("..") && !key.includes("\\");
-  }
-
-  if (isDataImageUrl(trimmed)) {
-    return trimmed.length <= MAX_IMAGE_DATA_URL_LENGTH;
   }
 
   try {
