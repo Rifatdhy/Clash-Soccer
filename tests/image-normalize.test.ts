@@ -71,3 +71,26 @@ test("re-encoding rejects a file whose image data cannot be decoded", async () =
   assert.equal(identifyImage(broken)?.mime, "image/jpeg");
   await assert.rejects(() => normalizeImage(broken, "image/jpeg"));
 });
+
+test("re-encoding applies the exif orientation before dropping the metadata", async () => {
+  // Phones store landscape pixels plus an orientation tag instead of rotating
+  // the image. Re-encoding without honouring the tag would leave every portrait
+  // photo lying on its side.
+  const landscape = await sharp({
+    create: { width: 40, height: 20, channels: 3, background: { r: 10, g: 80, b: 200 } },
+  })
+    .jpeg()
+    .withMetadata({ orientation: 6 })
+    .toBuffer();
+
+  const before = await sharp(landscape).metadata();
+  assert.equal(before.orientation, 6);
+
+  const clean = await normalizeImage(new Uint8Array(landscape), "image/jpeg");
+  const after = await sharp(clean).metadata();
+
+  // Orientation 6 rotates 90 degrees clockwise, so the sides swap.
+  assert.equal(after.width, 20);
+  assert.equal(after.height, 40);
+  assert.equal(after.orientation, undefined);
+});

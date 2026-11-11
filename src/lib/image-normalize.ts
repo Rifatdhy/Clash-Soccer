@@ -19,7 +19,9 @@ export async function normalizeImage(
   mime: ImageMime
 ): Promise<Uint8Array> {
   // Animated GIFs need `animated` or sharp keeps only the first frame.
-  const input = sharp(bytes, { animated: mime === "image/gif" });
+  // `rotate()` with no angle applies the EXIF orientation to the pixels before
+  // the tag is dropped, so portrait photos do not come back sideways.
+  const input = sharp(bytes, { animated: mime === "image/gif" }).rotate();
 
   const pipeline =
     mime === "image/png"
