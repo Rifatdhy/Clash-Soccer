@@ -2,9 +2,12 @@ import { Pool } from "pg";
 import type { PoolClient, QueryResultRow } from "pg";
 import fs from "fs";
 import { assertEnv } from "./env.ts";
+import { configurePgTypes } from "./pg-types.ts";
 import { createLogger } from "./logger.ts";
 
 const logger = createLogger({ service: "database" });
+
+configurePgTypes();
 
 const isProduction = process.env.NODE_ENV === "production";
 

@@ -33,3 +33,10 @@ test("update requires an id and validates slot arithmetic", () => {
     false
   );
 });
+
+test("create schema rejects impossible and non-ISO dates", () => {
+  for (const date of ["2026-02-30", "2026-13-01", "01/02/2026", "5", "2026-01-01T00:00:00Z"]) {
+    assert.equal(matchCreateSchema.safeParse({ ...base, date }).success, false, date);
+  }
+  assert.equal(matchCreateSchema.safeParse({ ...base, date: "2026-02-28" }).success, true);
+});

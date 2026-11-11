@@ -41,7 +41,7 @@ const baseNewsSchema = z
       .trim()
       .refine(isAllowedImageUrl, "Invalid image URL")
       .optional(),
-    date: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid date"),
+    date: z.iso.date("Invalid date (expected YYYY-MM-DD)"),
   })
   .extend(newsInputSchema.shape);
 
