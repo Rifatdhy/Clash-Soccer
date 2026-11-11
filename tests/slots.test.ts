@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { canReserve, availableAfterTotalChange, restoreSlots } from "../src/lib/slots.ts";
+import {
+  canReserve,
+  availableAfterTotalChange,
+  restoreSlots,
+  slotsWithinLimits,
+} from "../src/lib/slots.ts";
 
 test("canReserve accepts a request that fits the remaining slots", () => {
   assert.equal(canReserve(2, 2), true);
@@ -34,4 +39,12 @@ test("restoring slots from a deleted RSVP adds the participants back", () => {
 
 test("restoring slots never exceeds the total", () => {
   assert.equal(restoreSlots(20, 18, 10), 20);
+});
+
+test("slotsWithinLimits rejects availability above the total", () => {
+  assert.equal(slotsWithinLimits(10, 10), true);
+  assert.equal(slotsWithinLimits(10, 0), true);
+  assert.equal(slotsWithinLimits(10, 11), false);
+  assert.equal(slotsWithinLimits(10, -1), false);
+  assert.equal(slotsWithinLimits(10, 2.5), false);
 });

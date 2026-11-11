@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { slotsWithinLimits } from "./slots.ts";
 
 const matchStatus = z.enum(["upcoming", "completed", "ongoing"]);
 
@@ -24,7 +25,7 @@ function slotsWithinTotal(data: {
   return (
     data.slotsAvailable === undefined ||
     data.slotsTotal === undefined ||
-    data.slotsAvailable <= data.slotsTotal
+    slotsWithinLimits(data.slotsTotal, data.slotsAvailable)
   );
 }
 
