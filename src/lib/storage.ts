@@ -23,7 +23,7 @@ export function resolveStorageDriver(
 }
 
 function getUploadDir(env: Record<string, string | undefined> = process.env): string {
-  return env.UPLOAD_DIR?.trim() || join(process.cwd(), ".data", "uploads");
+  return env.UPLOAD_DIR?.trim() || join(/* turbopackIgnore: true */ process.cwd(), ".data", "uploads");
 }
 
 function assertSafeKey(key: string): void {
