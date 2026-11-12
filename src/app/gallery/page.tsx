@@ -17,8 +17,8 @@ export default async function GalleryPage() {
   return (
     <>
       <PageHeader
-        title="Gallery"
-        subtitle="Dokumentasi setiap momen pertandingan Clash.Soccer."
+        title="The Clash archive"
+        subtitle="Dokumentasi momen-momen pertandingan Clash.Soccer."
       />
 
       <Section>

@@ -1,13 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, Share2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Section from "@/components/section";
 import { formatDate } from "@/lib/format";
 import type { NewsItem } from "@/types";
 import Image from "next/image";
 import { BrandFallback } from "@/components/content-state";
+import { WhatsAppIcon } from "@/components/icons";
 
 export default function NewsDetailView({ article }: { article: NewsItem }) {
   return (
@@ -93,7 +94,7 @@ export default function NewsDetailView({ article }: { article: NewsItem }) {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-secondary-text hover:text-accent transition-colors"
             >
-              <Share2 size={16} /> Share via WhatsApp
+              <WhatsAppIcon size={17} /> Share via WhatsApp
             </a>
           </motion.div>
         </div>

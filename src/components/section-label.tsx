@@ -8,10 +8,10 @@ export function SectionLabel({ children, as = "h2" }: SectionLabelProps) {
 
   return (
     <>
-      <Tag className="font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim">
+      <Tag className="font-condensed text-xs uppercase tracking-[0.18em] text-secondary-text">
         {children}
       </Tag>
-      <span className="mt-2 block h-0.5 w-10 bg-crest" aria-hidden="true" />
+      <span className="mt-3 block h-1 w-8 bg-crest" aria-hidden="true" />
     </>
   );
 }

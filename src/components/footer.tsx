@@ -1,8 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Setting } from "@/types";
-import { MessageCircle } from "lucide-react";
-import { InstagramIcon } from "@/components/icons";
+import { InstagramIcon, WhatsAppIcon } from "@/components/icons";
+import Brand from "./brand";
 
 /**
  * Settings arrive from the server layout, so the description and contact links
@@ -16,15 +15,10 @@ export default function Footer({ settings }: { settings: Setting }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
             <Link href="/" className="inline-flex items-center py-2">
-              <Image
-                src="/logo-mark.png"
-                alt="Clash Soccer"
-                width={807}
-                height={262}
-                className="h-7 w-auto"
-              />
+              <Brand inverted />
             </Link>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-bone-dim">
+            <p className="font-condensed text-xs uppercase tracking-[0.18em] text-bone-dim">Keep up with Clash</p>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-bone-dim">
               {settings.description}
             </p>
           </div>
@@ -58,7 +52,7 @@ export default function Footer({ settings }: { settings: Setting }) {
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-bone-dim hover:text-bone transition-colors"
                 >
-                  <MessageCircle size={16} />
+                  <WhatsAppIcon size={16} />
                   WhatsApp
                 </a>
               )}

@@ -22,11 +22,19 @@ export default function FaqView({ faqs }: { faqs: FaqItem[] }) {
     <>
       <PageHeader
         title="FAQ"
-        subtitle="Pertanyaan yang sering diajukan tentang Clash.Soccer."
+          subtitle="Cara ikut main, lokasi, pembayaran, dan hal-hal yang perlu kamu tahu sebelum kick-off."
       />
 
       <Section>
-        <div className="max-w-3xl mx-auto">
+          <div className="mx-auto max-w-3xl">
+            <div className="mb-10 grid gap-3 sm:grid-cols-3">
+              {[['01', 'Cara ikut main'], ['02', 'Hari pertandingan'], ['03', 'Sebelum kick-off']].map(([number, label]) => (
+                <div key={number} className="border-t-2 border-accent pt-3">
+                  <span className="font-condensed text-xs tracking-[0.18em] text-accent">{number}</span>
+                  <p className="mt-2 font-display text-sm text-primary-text">{label}</p>
+                </div>
+              ))}
+            </div>
           <div className="relative mb-12">
             <Search
               size={16}

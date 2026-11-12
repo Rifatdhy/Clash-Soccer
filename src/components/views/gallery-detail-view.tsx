@@ -87,7 +87,7 @@ export default function AlbumDetailView({ album }: { album: Album }) {
                 href={album.gdriveLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity whitespace-nowrap"
+                className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium uppercase tracking-widest text-charcoal transition-all hover:bg-crest-hover hover:shadow-[0_8px_18px_rgba(127,29,50,0.22)] whitespace-nowrap"
               >
                 <ExternalLink size={16} />
                 Buka Google Drive
@@ -119,7 +119,7 @@ export default function AlbumDetailView({ album }: { album: Album }) {
               exit={{ scale: 0.9 }}
               className="relative w-full max-w-4xl max-h-[85vh]"
             >
-              <Image src={lightbox} alt="" fill sizes="100vw" className="object-contain" />
+              <Image src={lightbox} alt={`Foto dari album ${album.title}`} fill sizes="100vw" className="object-contain" />
             </motion.div>
           </motion.div>
         )}

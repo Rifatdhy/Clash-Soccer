@@ -23,7 +23,9 @@ export function resolveStorageDriver(
 }
 
 function getUploadDir(env: Record<string, string | undefined> = process.env): string {
-  return env.UPLOAD_DIR?.trim() || join(/* turbopackIgnore: true */ process.cwd(), ".data", "uploads");
+  const configured = env.UPLOAD_DIR?.trim();
+  if (configured) return configured;
+  return join(process.cwd(), ".data", "uploads");
 }
 
 function assertSafeKey(key: string): void {
@@ -76,7 +78,7 @@ async function putLocal(input: {
   body: Uint8Array;
 }): Promise<{ url: string }> {
   assertSafeKey(input.key);
-  const target = join(getUploadDir(), input.key);
+  const target = join(/* turbopackIgnore: true */ getUploadDir(), input.key);
   await mkdir(dirname(target), { recursive: true });
   await writeFile(target, input.body);
   return { url: `/api/uploads/${input.key}` };
@@ -133,7 +135,7 @@ export async function getObject(
   assertSafeKey(key);
 
   if (resolveStorageDriver() !== "s3") {
-    const body = await readFile(join(getUploadDir(), key));
+    const body = await readFile(join(/* turbopackIgnore: true */ getUploadDir(), key));
     return { body: new Uint8Array(body), contentType: contentTypeForKey(key) };
   }
 
@@ -164,7 +166,7 @@ export async function deleteObject(key: string): Promise<void> {
   assertSafeKey(key);
 
   if (resolveStorageDriver() !== "s3") {
-    const target = join(getUploadDir(), key);
+  const target = join(/* turbopackIgnore: true */ getUploadDir(), key);
     await rm(target, { force: true });
     return;
   }

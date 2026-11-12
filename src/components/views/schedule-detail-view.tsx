@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Clock, Users, ArrowLeft, Plus, Trash2, CheckCircle2, Ticket } from "lucide-react";
+import { MapPin, Clock, Users, ArrowLeft, Plus, Trash2, CheckCircle2, Ticket, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Section from "@/components/section";
 import Badge from "@/components/badge";
@@ -16,6 +16,7 @@ export default function ScheduleDetailView({ match }: { match: Match }) {
   const [form, setForm] = useState({ name: "", whatsapp: "", jerseySize: "M" });
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const remainingSlots = current.slotsAvailable;
   const registeredCount = current.slotsTotal - current.slotsAvailable;
@@ -41,6 +42,7 @@ export default function ScheduleDetailView({ match }: { match: Match }) {
     }
 
     try {
+      setIsSubmitting(true);
       await addRsvp(current.id, participants);
       setCurrent({
         ...current,
@@ -49,6 +51,8 @@ export default function ScheduleDetailView({ match }: { match: Match }) {
       setSubmitted(true);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Gagal mengirim RSVP.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -69,12 +73,12 @@ export default function ScheduleDetailView({ match }: { match: Match }) {
           className="border border-border bg-surface/80 overflow-hidden"
         >
           <div className="px-6 md:px-8 py-5 border-b border-border flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
               <Badge variant={current.status}>
                 {current.status === "upcoming" ? "Upcoming" : current.status === "ongoing" ? "Live" : "Completed"}
               </Badge>
-              <span className="text-xs uppercase tracking-[0.24em] text-secondary-text">
-                Match detail
+                <span className="text-xs uppercase tracking-[0.24em] text-secondary-text">
+                 {current.status === "upcoming" ? "Next game" : "Match detail"}
               </span>
             </div>
 
@@ -184,8 +188,16 @@ export default function ScheduleDetailView({ match }: { match: Match }) {
                     </div>
                   ) : (
                     <>
-                      <p className="text-secondary-text text-sm leading-relaxed mb-6">
-                        Tambahkan peserta satu per satu, lalu kirim RSVP. Pastikan nomor WhatsApp aktif agar detail pertandingan mudah dihubungi.
+                   <div className="mb-6 grid grid-cols-3 gap-2 border-y border-border py-4 text-center">
+                     {[['01', 'Choose a game'], ['02', 'RSVP'], ['03', 'Show up']].map(([number, label]) => (
+                       <div key={number}>
+                         <span className="font-condensed text-[10px] tracking-[0.18em] text-accent">{number}</span>
+                         <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-secondary-text">{label}</p>
+                       </div>
+                     ))}
+                   </div>
+                   <p className="text-secondary-text text-sm leading-relaxed mb-6">
+                         Tambahkan peserta satu per satu, lalu amankan tempatmu. Pastikan nomor WhatsApp aktif agar detail pertandingan mudah dihubungi.
                       </p>
 
                       <div className="space-y-4 mb-6">
@@ -280,9 +292,9 @@ export default function ScheduleDetailView({ match }: { match: Match }) {
                       <button
                         onClick={handleSubmit}
                         disabled={participants.length === 0}
-                        className="w-full py-3.5 bg-accent text-charcoal text-sm font-medium uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="w-full rounded-full bg-accent py-3.5 text-sm font-medium uppercase tracking-widest text-charcoal transition-all hover:bg-crest-hover hover:shadow-[0_8px_18px_rgba(127,29,50,0.22)] disabled:opacity-30 disabled:cursor-not-allowed"
                       >
-                        Submit RSVP
+                        {isSubmitting ? "Reserving your spot…" : "Submit RSVP"}
                       </button>
                     </>
                   )}
@@ -298,7 +310,7 @@ export default function ScheduleDetailView({ match }: { match: Match }) {
                     <div className="w-16 h-16 rounded-full border border-accent/40 bg-accent/10 flex items-center justify-center mx-auto mb-5">
                       <CheckCircle2 size={28} className="text-accent" />
                     </div>
-                    <h2 className="text-2xl font-bold text-primary-text mb-2">RSVP sent</h2>
+                     <h2 className="text-2xl font-bold text-primary-text mb-2">You&apos;re on the list.</h2>
                     <p className="text-secondary-text leading-relaxed">
                       {participants.length} participant{participants.length > 1 ? "s" : ""} registered successfully.
                     </p>
@@ -309,7 +321,7 @@ export default function ScheduleDetailView({ match }: { match: Match }) {
                       href="/schedule"
                       className="inline-flex items-center gap-2 mt-6 px-5 py-3 bg-elevated text-primary-text text-sm uppercase tracking-widest hover:bg-border transition-colors"
                     >
-                      Back to Schedule
+                       Find another game <ArrowRight size={14} />
                     </Link>
                   </div>
                 </motion.div>

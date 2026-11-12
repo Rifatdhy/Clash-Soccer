@@ -50,13 +50,9 @@ export default function AboutView({ settings }: { settings: Setting }) {
           >
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/10 pointer-events-none" />
             <div className="relative z-10 flex items-center justify-center bg-white rounded-2xl p-5 md:p-8 shadow-[0_0_40px_rgba(255,255,255,0.08)]">
-              <Image
-                src="/logo.png"
-                alt="Clash Soccer Logo"
-                width={1024}
-                height={1536}
-                className="block w-[180px] md:w-[260px] max-w-full h-auto object-contain"
-              />
+              <div className="flex flex-col items-center gap-5 bg-ink px-10 py-12 text-center text-bone md:px-16">
+                <Image src="/logo.png" alt="Clash Soccer" width={1024} height={1536} className="h-auto max-h-[330px] w-auto max-w-[230px] object-contain md:max-h-[400px] md:max-w-[290px]" />
+              </div>
             </div>
           </motion.div>
         </div>
