@@ -271,6 +271,7 @@ export default function AdminGallery() {
                           src={form.coverUrl}
                           alt="cover"
                           fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
                           className="object-contain p-2"
                         />
                         <div className="absolute inset-0 bg-charcoal/0 hover:bg-charcoal/40 transition-colors flex items-center justify-center">
@@ -377,6 +378,7 @@ export default function AdminGallery() {
                           src={manageDraft.coverUrl}
                           alt="Cover preview"
                           fill
+                          sizes="3rem"
                           className="object-contain p-1"
                         />
                       </div>

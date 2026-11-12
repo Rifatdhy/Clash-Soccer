@@ -244,6 +244,7 @@ export default function AdminNews() {
                           src={form.coverImage}
                           alt="cover"
                           fill
+                          sizes="(max-width: 768px) 100vw, 50vw"
                           className="object-contain p-2"
                         />
                         <div className="absolute inset-0 bg-charcoal/0 hover:bg-charcoal/40 transition-colors flex items-center justify-center">

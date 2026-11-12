@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { formatEnvIssues, validateEnv } from "@/lib/env";
-import { describeHealth } from "@/lib/health";
+import { describeHealth, publicHealth } from "@/lib/health";
 import { createLogger } from "@/lib/logger";
+import { isAdminRequest } from "@/lib/admin-auth";
 
 const logger = createLogger({ route: "/api/health" });
 
@@ -21,17 +22,20 @@ export async function GET() {
   }
 
   const health = describeHealth({ databaseOk, configIssues });
+  const isAdmin = await isAdminRequest();
 
   return NextResponse.json(
-    {
-      status: health.status,
-      database: health.database,
-      config: health.config,
-      issues: configIssues,
-      uptime: process.uptime(),
-      responseTimeMs: Date.now() - startedAt,
-      timestamp: new Date().toISOString(),
-    },
-    { status: health.httpStatus }
+    isAdmin
+      ? {
+          status: health.status,
+          database: health.database,
+          config: health.config,
+          issues: configIssues,
+          uptime: process.uptime(),
+          responseTimeMs: Date.now() - startedAt,
+          timestamp: new Date().toISOString(),
+        }
+      : publicHealth(health),
+    { status: health.httpStatus, headers: { "Cache-Control": "no-store" } }
   );
 }

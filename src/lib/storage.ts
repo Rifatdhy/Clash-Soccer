@@ -25,7 +25,7 @@ export function resolveStorageDriver(
 function getUploadDir(env: Record<string, string | undefined> = process.env): string {
   const configured = env.UPLOAD_DIR?.trim();
   if (configured) return configured;
-  return join(process.cwd(), ".data", "uploads");
+  return join(/*turbopackIgnore: true*/ process.cwd(), ".data", "uploads");
 }
 
 function assertSafeKey(key: string): void {

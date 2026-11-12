@@ -14,7 +14,7 @@ test("the health endpoint reports a healthy database", async ({ request }) => {
   expect(response.status()).toBe(200);
   const body = (await response.json()) as Record<string, unknown>;
   expect(body.status).toBe("ok");
-  expect(body.database).toBe("ok");
+  expect(Object.keys(body)).toEqual(["status"]);
 });
 
 test("db-init requires an admin session", async ({ request }) => {

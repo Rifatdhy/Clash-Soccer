@@ -30,6 +30,7 @@ export default function NewsCard({ item, index = 0 }: NewsCardProps) {
                 alt={item.title}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                loading={index === 0 ? "eager" : "lazy"}
                 className="object-contain object-center p-3 group-hover:scale-[1.02] transition-transform duration-500"
               />
             ) : (

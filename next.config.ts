@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  outputFileTracingExcludes: {
+    "/api/uploads/[...path]": ["./.data/uploads/**/*"],
+  },
   // The dev server is commonly opened as localhost while Playwright and
   // browser tooling reach it through 127.0.0.1.
   allowedDevOrigins: ["127.0.0.1"],

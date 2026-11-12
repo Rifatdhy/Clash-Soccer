@@ -22,6 +22,10 @@ export interface HealthResult {
   httpStatus: 200 | 503;
 }
 
+export function publicHealth(result: HealthResult): { status: HealthStatus } {
+  return { status: result.status };
+}
+
 export function describeHealth({ databaseOk, configIssues }: HealthInput): HealthResult {
   const config: HealthComponent = configIssues.length > 0 ? "degraded" : "ok";
   const database: HealthComponent = databaseOk ? "ok" : "error";

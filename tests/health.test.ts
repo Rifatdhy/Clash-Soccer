@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { describeHealth } from "../src/lib/health.ts";
+import { describeHealth, publicHealth } from "../src/lib/health.ts";
 
 test("a healthy database with valid config reports ok", () => {
   const result = describeHealth({ databaseOk: true, configIssues: [] });
@@ -37,4 +37,9 @@ test("an unreachable database with bad config reports both problems", () => {
   assert.equal(result.status, "error");
   assert.equal(result.config, "degraded");
   assert.equal(result.httpStatus, 503);
+});
+
+test("public health response does not expose component or timing details", () => {
+  const result = describeHealth({ databaseOk: true, configIssues: [] });
+  assert.deepEqual(publicHealth(result), { status: "ok" });
 });
