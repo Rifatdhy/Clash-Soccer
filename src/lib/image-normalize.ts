@@ -2,6 +2,24 @@ import sharp from "sharp";
 import type { ImageMime } from "./validation.ts";
 
 /**
+ * Hard ceiling for decoded pixels. A 5 MB file can still decompress into a
+ * gigantic bitmap (decompression bomb), and `sharp` would happily allocate it.
+ * 40 MP covers every phone and consumer camera while keeping memory bounded.
+ */
+export const MAX_IMAGE_PIXELS = 40_000_000;
+
+export function imageInputOptions(mime: ImageMime): {
+  animated: boolean;
+  limitInputPixels: number;
+} {
+  return {
+    // Animated GIFs need `animated` or sharp keeps only the first frame.
+    animated: mime === "image/gif",
+    limitInputPixels: MAX_IMAGE_PIXELS,
+  };
+}
+
+/**
  * Re-encode an uploaded image from its decoded pixels instead of storing the
  * bytes the client sent.
  *
@@ -18,10 +36,9 @@ export async function normalizeImage(
   bytes: Uint8Array,
   mime: ImageMime
 ): Promise<Uint8Array> {
-  // Animated GIFs need `animated` or sharp keeps only the first frame.
   // `rotate()` with no angle applies the EXIF orientation to the pixels before
   // the tag is dropped, so portrait photos do not come back sideways.
-  const input = sharp(bytes, { animated: mime === "image/gif" }).rotate();
+  const input = sharp(bytes, imageInputOptions(mime)).rotate();
 
   const pipeline =
     mime === "image/png"

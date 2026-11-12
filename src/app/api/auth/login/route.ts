@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { createAdminSessionToken } from "@/lib/admin-auth";
 import { STORAGE_KEYS } from "@/lib/constants";
 import { success, unauthorized, serverError, validate, tooManyRequests } from "@/lib/api-helpers";
-import { consume, getClientIp, resetRateLimit } from "@/lib/rate-limit";
+import { consumeLoginAttempt, getClientIp, resetLoginIpBucket } from "@/lib/rate-limit";
 import { verifyPassword } from "@/lib/password";
 
 const loginSchema = z.object({
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   // first would let an unauthenticated caller force a JSON parse on every
   // attempt, including the ones that should have been rejected outright.
   const ip = getClientIp(req);
-  const limited = await consume("login", ip);
+  const limited = await consumeLoginAttempt(ip);
   if (!limited.allowed) {
     return tooManyRequests(
       "Too many login attempts. Please try again later.",
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       const isPasswordMatch = verifyPassword(password, adminPassword);
 
       if (isUsernameMatch && isPasswordMatch) {
-        await resetRateLimit("login", ip);
+        await resetLoginIpBucket(ip);
         const token = await createAdminSessionToken(username);
         const response = success({ message: "Login successful", user: { username } });
 

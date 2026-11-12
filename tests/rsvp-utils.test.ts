@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { duplicateWhatsAppNumbers } from "../src/lib/rsvp-utils.ts";
+import { duplicateWhatsAppNumbers, isRsvpOpen } from "../src/lib/rsvp-utils.ts";
 
 test("returns numbers that already registered for the match", () => {
   const duplicates = duplicateWhatsAppNumbers(
@@ -38,4 +38,10 @@ test("rejects the same number twice inside one RSVP", () => {
     [{ whatsapp: "081234567890" }, { whatsapp: "6281234567890" }]
   );
   assert.deepEqual(duplicates, ["6281234567890"]);
+});
+
+test("only upcoming matches accept RSVPs", () => {
+  assert.equal(isRsvpOpen("upcoming"), true);
+  assert.equal(isRsvpOpen("ongoing"), false);
+  assert.equal(isRsvpOpen("completed"), false);
 });

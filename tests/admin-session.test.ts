@@ -102,3 +102,21 @@ test("no token verifies while ADMIN_USERNAME is not configured", async () => {
     process.env.ADMIN_USERNAME = original;
   }
 });
+
+test("production refuses to sign a session without ADMIN_AUTH_SECRET", async () => {
+  const originalSecret = process.env.ADMIN_AUTH_SECRET;
+  const originalEnv = process.env.NODE_ENV;
+  delete process.env.ADMIN_AUTH_SECRET;
+
+  try {
+    // NODE_ENV is read-only in @types/node, but the runtime allows assignment.
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    await assert.rejects(() => createAdminSessionToken(USERNAME), /ADMIN_AUTH_SECRET/);
+  } finally {
+    if (originalSecret === undefined) delete process.env.ADMIN_AUTH_SECRET;
+    else process.env.ADMIN_AUTH_SECRET = originalSecret;
+
+    if (originalEnv === undefined) delete (process.env as Record<string, string | undefined>).NODE_ENV;
+    else (process.env as Record<string, string | undefined>).NODE_ENV = originalEnv;
+  }
+});

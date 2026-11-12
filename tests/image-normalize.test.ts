@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 
-import { normalizeImage } from "../src/lib/image-normalize.ts";
+import { normalizeImage, imageInputOptions, MAX_IMAGE_PIXELS } from "../src/lib/image-normalize.ts";
 import { identifyImage } from "../src/lib/validation.ts";
 
 /**
@@ -70,6 +70,12 @@ test("re-encoding rejects a file whose image data cannot be decoded", async () =
   );
   assert.equal(identifyImage(broken)?.mime, "image/jpeg");
   await assert.rejects(() => normalizeImage(broken, "image/jpeg"));
+});
+
+test("image input has an explicit pixel ceiling", () => {
+  assert.equal(imageInputOptions("image/gif").animated, true);
+  assert.equal(imageInputOptions("image/png").animated, false);
+  assert.equal(imageInputOptions("image/jpeg").limitInputPixels, MAX_IMAGE_PIXELS);
 });
 
 test("re-encoding applies the exif orientation before dropping the metadata", async () => {

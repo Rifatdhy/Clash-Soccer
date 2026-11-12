@@ -21,13 +21,13 @@ export default function ScheduleView({
   return (
     <>
       <PageHeader
-        title="Schedule"
-        subtitle="Jadwal pertandingan Clash.Soccer. Jangan lewatkan kesempatan untuk bermain."
+          title="Upcoming games."
+          subtitle="Tanggal-tanggal Clash.Soccer berikutnya. Pilih show, amankan tempat, lalu datang bermain."
       />
 
       <Section>
-        <h2 className="text-2xl font-bold text-primary-text mb-8 tracking-tight font-display uppercase">
-          Matches
+        <h2 className="text-4xl font-statement leading-none text-primary-text mb-8 md:text-6xl">
+          Tour dates
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {upcomingMatches.length === 0 ? (
@@ -50,7 +50,7 @@ export default function ScheduleView({
               aria-controls="past-matches"
               className="flex items-center gap-2 text-sm uppercase tracking-widest text-secondary-text hover:text-accent transition-colors"
             >
-              {showPast ? "Hide" : "Show"} Past Matches ({pastMatches.length})
+              {showPast ? "Hide" : "Show"} The archive ({pastMatches.length})
             </button>
 
             {showPast && (

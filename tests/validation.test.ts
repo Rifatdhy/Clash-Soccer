@@ -3,11 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   exceedsByteLimit,
-  MAX_IMAGE_DATA_URL_LENGTH,
   MAX_JSON_BODY_BYTES,
   MAX_UPLOAD_BYTES,
   isAllowedImageUrl,
-  isDataImageUrl,
   isHttpUrl,
   sanitizeNextPath,
 } from "../src/lib/validation.ts";
@@ -43,14 +41,9 @@ test("upload paths cannot escape their directory", () => {
   assert.equal(isAllowedImageUrl("//evil.example/api/uploads/a.png"), false);
 });
 
-test("uploaded data images are allowed", () => {
-  assert.equal(isDataImageUrl("data:image/png;base64,iVBORw0KGgo="), true);
-  assert.equal(isAllowedImageUrl("data:image/webp;base64,AAAA"), true);
-});
-
-test("uploads larger than the server cap are rejected", () => {
-  const oversized = "data:image/png;base64," + "A".repeat(2_000_001);
-  assert.equal(isAllowedImageUrl(oversized), false);
+test("data URLs are rejected: images must go through the upload API", () => {
+  assert.equal(isAllowedImageUrl("data:image/png;base64,iVBORw0KGgo="), false);
+  assert.equal(isAllowedImageUrl("data:image/webp;base64,AAAA"), false);
 });
 
 test("javascript and random strings are not image URLs", () => {
@@ -104,15 +97,4 @@ test("exceedsByteLimit ignores a missing or nonsense header", () => {
 test("a JSON body cap exists and is smaller than the upload cap", () => {
   assert.ok(MAX_JSON_BODY_BYTES > 0);
   assert.ok(MAX_JSON_BODY_BYTES <= MAX_UPLOAD_BYTES);
-});
-
-test("every image the validator accepts fits inside a JSON request body", () => {
-  // isAllowedImageUrl accepts a data URL up to MAX_IMAGE_DATA_URL_LENGTH, but
-  // that field travels inside a JSON body capped at MAX_JSON_BODY_BYTES. If
-  // the image limit is the larger of the two, the validator promises a value
-  // the transport will always reject, and the user sees an unexplained 413.
-  assert.ok(
-    MAX_IMAGE_DATA_URL_LENGTH < MAX_JSON_BODY_BYTES,
-    `image limit ${MAX_IMAGE_DATA_URL_LENGTH} must stay below body cap ${MAX_JSON_BODY_BYTES}`
-  );
 });

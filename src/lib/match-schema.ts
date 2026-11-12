@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { slotsWithinLimits } from "./slots.ts";
 
 const matchStatus = z.enum(["upcoming", "completed", "ongoing"]);
 
 const baseMatchSchema = z.object({
   id: z.string().trim().min(1, "ID is required"),
   title: z.string().trim().min(1, "Title is required"),
-  date: z.string().refine((val) => !isNaN(Date.parse(val)), "Invalid date"),
+  date: z.iso.date("Invalid date (expected YYYY-MM-DD)"),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
   location: z.string().trim().min(1, "Location is required"),
   slotsTotal: z.number().int().positive("Total slots must be a positive number"),
@@ -24,7 +25,7 @@ function slotsWithinTotal(data: {
   return (
     data.slotsAvailable === undefined ||
     data.slotsTotal === undefined ||
-    data.slotsAvailable <= data.slotsTotal
+    slotsWithinLimits(data.slotsTotal, data.slotsAvailable)
   );
 }
 

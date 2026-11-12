@@ -18,8 +18,8 @@ export default async function NewsPage() {
   return (
     <>
       <PageHeader
-        title="News"
-        subtitle="Berita, pengumuman, dan informasi terbaru dari komunitas Clash.Soccer."
+        title="From the pitch"
+        subtitle="Cerita, pengumuman, dan kabar terbaru dari komunitas Clash.Soccer."
       />
 
       <Section>

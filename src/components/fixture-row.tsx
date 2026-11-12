@@ -35,7 +35,12 @@ export function FixtureRow({ match }: FixtureRowProps) {
         <p className="text-sm text-bone-dim">{match.location}</p>
       </div>
 
-      <SlotMeter available={match.slotsAvailable} total={match.slotsTotal} />
+      <div className="flex items-center justify-between gap-4 md:block">
+        <SlotMeter available={match.slotsAvailable} total={match.slotsTotal} />
+        <span className="font-condensed text-[10px] uppercase tracking-[0.16em] text-crest-ink opacity-0 transition-opacity group-hover:opacity-100 md:mt-2 md:block">
+          {match.slotsAvailable > 0 ? "Join this game →" : "View fixture →"}
+        </span>
+      </div>
     </Link>
   );
 }

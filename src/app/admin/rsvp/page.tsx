@@ -6,6 +6,7 @@ import { Download, Trash2, ArrowLeft, Users } from "lucide-react";
 import Card from "@/components/card";
 import { deleteRsvp, getAllRsvp } from "@/lib/rsvp-store";
 import { getMatches } from "@/lib/match-store";
+import { formatDate } from "@/lib/format";
 import type { RsvpEntry, Match } from "@/types";
 
 function csvEscape(value: unknown) {
@@ -160,11 +161,7 @@ export default function AdminRSVP() {
                             {m.status}
                           </span>
                           <span className="text-xs text-secondary-text">
-                            {new Date(m.date).toLocaleDateString("id-ID", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                            {formatDate(m.date)}
                           </span>
                         </div>
                         <h3 className="text-lg font-bold text-primary-text mb-2 group-hover:text-accent transition-colors">

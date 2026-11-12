@@ -3,6 +3,7 @@ import { createRsvp, deleteRsvp, listRsvps } from "@/lib/rsvp-service";
 import { consume, getClientIp, RSVP_RATE_LIMIT } from "@/lib/rate-limit";
 import {
   badRequest,
+  conflict,
   created,
   notFound,
   requireAdmin,
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
       const result = await createRsvp(data);
 
       if (result.kind === "not_found") return notFound("Match not found");
+      if (result.kind === "closed") return conflict("RSVP is closed for this match");
       if (result.kind === "no_slots") return badRequest("Not enough slots available");
       if (result.kind === "duplicate") {
         return badRequest("One or more WhatsApp numbers are already registered for the match", {

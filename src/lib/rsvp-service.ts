@@ -3,7 +3,7 @@ import { query, withTransaction } from "./db.ts";
 import { invalidateDataCache } from "./data.ts";
 import { createLogger } from "./logger.ts";
 import { canReserve, restoreSlots } from "./slots.ts";
-import { duplicateWhatsAppNumbers } from "./rsvp-utils.ts";
+import { duplicateWhatsAppNumbers, isRsvpOpen } from "./rsvp-utils.ts";
 import type { Participant, RsvpEntry } from "@/types";
 
 const logger = createLogger({ service: "rsvp" });
@@ -11,6 +11,7 @@ const logger = createLogger({ service: "rsvp" });
 export type CreateRsvpResult =
   | { kind: "ok"; id: string; registeredAt: string }
   | { kind: "not_found" }
+  | { kind: "closed" }
   | { kind: "no_slots" }
   | { kind: "duplicate"; duplicates: string[] };
 
@@ -95,15 +96,19 @@ export async function createRsvp(input: {
   const { matchId, participants } = input;
 
   const result = await withTransaction(async (client) => {
-    const matchRes = await client.query<{ slots_available: number }>(
-      "SELECT slots_available FROM matches WHERE id = $1 FOR UPDATE",
+    const matchRes = await client.query<{ slots_available: number; status: "upcoming" | "ongoing" | "completed" }>(
+      "SELECT slots_available, status FROM matches WHERE id = $1 FOR UPDATE",
       [matchId]
     );
     if (matchRes.rowCount === 0) {
       return { kind: "not_found" as const };
     }
 
-    const { slots_available } = matchRes.rows[0];
+    const { slots_available, status } = matchRes.rows[0];
+    if (!isRsvpOpen(status)) {
+      return { kind: "closed" as const };
+    }
+
     if (!canReserve(slots_available, participants.length)) {
       return { kind: "no_slots" as const };
     }

@@ -3,12 +3,16 @@ import assert from "node:assert/strict";
 
 import {
   consume,
+  consumeLoginAttempt,
   getClientIp,
+  LOGIN_GLOBAL_RATE_LIMIT,
+  resetLoginIpBucket,
   resetRateLimit,
   setRateLimitStore,
   RATE_LIMIT_DEFAULTS,
   UNKNOWN_CLIENT_IP,
 } from "../src/lib/rate-limit.ts";
+import { createMemoryStore } from "../src/lib/rate-limit-store.ts";
 import { retryAfterSeconds } from "../src/lib/retry-after.ts";
 
 test("first attempt is allowed", async () => {
@@ -120,4 +124,31 @@ test("the unknown-address bucket is a named constant, not a magic string", () =>
     getClientIp(new Request("http://localhost/api/login")),
     UNKNOWN_CLIENT_IP
   );
+});
+
+test("login attempts from many spoofed IPs still hit a global ceiling", async () => {
+  setRateLimitStore(createMemoryStore());
+
+  for (let i = 0; i < LOGIN_GLOBAL_RATE_LIMIT.max; i += 1) {
+    const result = await consumeLoginAttempt(`10.0.0.${i}`);
+    assert.equal(result.allowed, true);
+  }
+
+  const blocked = await consumeLoginAttempt("203.0.113.99");
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.scope, "global");
+  assert.ok(blocked.retryAfterMs > 0);
+});
+
+test("resetting the IP bucket does not reset the global ceiling", async () => {
+  setRateLimitStore(createMemoryStore());
+
+  for (let i = 0; i < LOGIN_GLOBAL_RATE_LIMIT.max; i += 1) {
+    await consumeLoginAttempt(`10.1.0.${i}`);
+  }
+
+  await resetLoginIpBucket("203.0.113.99");
+  const blocked = await consumeLoginAttempt("203.0.113.99");
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.scope, "global");
 });

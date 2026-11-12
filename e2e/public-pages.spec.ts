@@ -29,3 +29,17 @@ test("primary navigation reaches the schedule page", async ({ page }) => {
   await expect(page).toHaveURL(/\/schedule$/);
   await expect(page.getByRole("heading", { level: 1, name: /^schedule$/i })).toBeVisible();
 });
+
+test("a Drive album still opens its detail page and links out to Drive", async ({ page }) => {
+  await page.goto("/gallery");
+
+  const driveCard = page.getByRole("link").filter({ hasText: /Google Drive/i }).first();
+  await expect(driveCard).toBeVisible();
+  await driveCard.click();
+
+  await expect(page).toHaveURL(/\/gallery\/[^/]+$/);
+
+  const openDrive = page.getByRole("link", { name: /Buka Google Drive/i });
+  await expect(openDrive).toBeVisible();
+  await expect(openDrive).toHaveAttribute("href", /^https:\/\/drive\.google\.com\//);
+});

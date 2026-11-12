@@ -4,21 +4,23 @@ import { usePathname } from "next/navigation";
 import Navbar from "./navbar";
 import Footer from "./footer";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Setting } from "@/types";
+import type { Match, Setting } from "@/types";
 
 export default function LayoutContent({
   children,
   settings,
+  nextMatch,
 }: {
   children: React.ReactNode;
   settings: Setting;
+  nextMatch: Match | null;
 }) {
   const pathname = usePathname();
   const isAdminRoute = pathname?.startsWith("/admin");
 
   return (
     <>
-      {!isAdminRoute && <Navbar />}
+      {!isAdminRoute && <Navbar nextMatch={nextMatch} />}
       <main className="flex-1 overflow-x-hidden">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

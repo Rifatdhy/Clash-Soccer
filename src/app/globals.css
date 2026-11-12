@@ -1,29 +1,37 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-charcoal: #0D0D0D;
-  --color-surface: #181818;
-  --color-elevated: #222222;
-  --color-border: #2D2D2D;
-  --color-primary-text: #F5F5F5;
-  --color-secondary-text: #A3A3A3;
-  --color-accent: #FFFFFF;
-  --color-accent-dim: rgba(255, 255, 255, 0.15);
-  --color-accent-subtle: rgba(255, 255, 255, 0.05);
+  --color-charcoal: #D5D7D8;
+  --color-surface: #E4E5E5;
+  --color-elevated: #F0F0EF;
+  --color-border: #AEB2B3;
+  --color-primary-text: #17191A;
+  --color-secondary-text: #555B5D;
+  --color-accent: #7F1D32;
+  --color-accent-dim: rgba(127, 29, 50, 0.14);
+  --color-accent-subtle: rgba(23, 25, 26, 0.06);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display);
 
-  --color-ink: #0C0C0D;
-  --color-ink-raised: #151517;
-  --color-ink-line: #2A2A2D;
-  --color-bone: #F2EFE9;
-  --color-bone-dim: #A6A29B;
-  --color-crest: #C4000D;
-  --color-crest-ink: #FF3B3B;
-  --color-crest-hover: #A3000A;
-  --color-pitch: #6FB77A;
+  --color-ink: #17191A;
+  --color-ink-raised: #262A2B;
+  --color-ink-line: #4A5051;
+  --color-bone: #F0F0EF;
+  --color-bone-dim: #B6B9B9;
+  --color-crest: #7F1D32;
+  --color-crest-ink: #A8495E;
+  --color-crest-hover: #641528;
+  --color-pitch: #666B6C;
+  --color-brand-red: #7F1D32;
+  --color-paper: #D5D7D8;
+  --color-paper-raised: #E4E5E5;
+  --color-ink-soft: #262A2B;
+  --color-red: #7F1D32;
+  --color-red-soft: rgba(127, 29, 50, 0.14);
+  --color-field: #666B6C;
+  --color-line: #AEB2B3;
 
   --font-statement: var(--font-instrument-serif);
   --font-condensed: var(--font-barlow-condensed);
@@ -31,18 +39,18 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2D2D2D #0D0D0D;
+  scrollbar-color: #666B6C #D5D7D8;
 }
 
 body {
-  background-color: #0D0D0D;
-  color: #F5F5F5;
+  background-color: #D5D7D8;
+  color: #17191A;
   font-family: var(--font-geist-sans);
 }
 
 ::selection {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: #FFFFFF;
+  background-color: #B94A32;
+  color: #F2EEE5;
 }
 
 @keyframes hero-enter {
@@ -62,6 +70,14 @@ body {
 .live-pulse {
   animation: live-pulse 2.5s ease-in-out infinite;
 }
+
+.brand-wordmark { letter-spacing: -0.045em; }
+
+.paper-grid {
+  background-image: none;
+}
+
+.display-balance { text-wrap: balance; }
 
 :focus-visible {
   outline: 2px solid var(--color-accent);

@@ -3,7 +3,7 @@ import { query, withTransaction } from "@/lib/db";
 import { fetchMatch, fetchMatches, invalidateDataCache } from "@/lib/data";
 import { matchCreateSchema, matchUpdateSchema } from "@/lib/match-schema";
 import { buildUpdate } from "@/lib/sql";
-import { availableAfterTotalChange } from "@/lib/slots";
+import { availableAfterTotalChange, slotsWithinLimits } from "@/lib/slots";
 import { isUniqueViolation } from "@/lib/pg-errors";
 import {
   badRequest,
@@ -89,8 +89,10 @@ export async function PUT(req: Request) {
       const result = await withTransaction(async (client) => {
         let effectiveUpdates: Record<string, unknown> = { ...updates };
 
-        // Raising or lowering the total must keep the slots already taken.
-        if (updates.slotsTotal !== undefined && updates.slotsAvailable === undefined) {
+        // Slot writes are validated against the row that is actually stored, not
+        // just against the fields present in this request. A PUT that sends only
+        // `slotsTotal` still has to keep availability inside the new total.
+        if (updates.slotsTotal !== undefined || updates.slotsAvailable !== undefined) {
           const current = await client.query<{ slots_total: number; slots_available: number }>(
             "SELECT slots_total, slots_available FROM matches WHERE id = $1 FOR UPDATE",
             [id]
@@ -98,13 +100,21 @@ export async function PUT(req: Request) {
           if (!current.rows[0]) {
             return { kind: "not_found" as const };
           }
+
+          const { slots_total, slots_available } = current.rows[0];
+          const total = updates.slotsTotal ?? slots_total;
+          const available =
+            updates.slotsTotal !== undefined && updates.slotsAvailable === undefined
+              ? availableAfterTotalChange(slots_total, slots_available, updates.slotsTotal)
+              : (updates.slotsAvailable ?? slots_available);
+
+          if (!slotsWithinLimits(total, available)) {
+            return { kind: "invalid_slots" as const };
+          }
+
           effectiveUpdates = {
             ...effectiveUpdates,
-            slotsAvailable: availableAfterTotalChange(
-              current.rows[0].slots_total,
-              current.rows[0].slots_available,
-              updates.slotsTotal
-            ),
+            slotsAvailable: available,
           };
         }
 
@@ -122,6 +132,8 @@ export async function PUT(req: Request) {
       });
 
       if (result.kind === "no_fields") return badRequest("No fields to update");
+      if (result.kind === "invalid_slots")
+        return badRequest("Available slots cannot exceed total slots");
       if (result.kind === "not_found") return notFound("Match not found");
 
       invalidateDataCache();

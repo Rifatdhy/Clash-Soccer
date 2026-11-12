@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ArrowUpRight } from "lucide-react";
+import Brand from "./brand";
+import type { Match } from "@/types";
+import { nextGameAction } from "@/lib/next-game-action";
 
 const links = [
   { href: "/", label: "Home" },
@@ -17,7 +19,8 @@ const links = [
   { href: "/contact", label: "Contact" },
 ];
 
-export default function Navbar() {
+export default function Navbar({ nextMatch }: { nextMatch: Match | null }) {
+  const action = nextGameAction(nextMatch);
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -40,20 +43,14 @@ export default function Navbar() {
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
           scrolled || !isHome
-            ? "bg-ink/95 backdrop-blur-sm border-b border-ink-line"
-            : "bg-transparent"
+            ? "bg-charcoal/95 backdrop-blur-md border-b border-border shadow-[0_1px_0_rgba(20,33,36,0.04)]"
+            : "bg-charcoal/85 backdrop-blur-sm"
         )}
       >
         <div className="mx-auto max-w-7xl px-4">
           <div className="flex items-center justify-between h-16 md:h-20">
             <Link href="/" className="inline-flex items-center py-2">
-              <Image
-                src="/logo-mark.png"
-                alt="Clash Soccer"
-                width={807}
-                height={262}
-                className="h-7 w-auto md:h-8"
-              />
+              <Brand />
             </Link>
 
             <div className="hidden md:flex items-center gap-8">
@@ -62,20 +59,26 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "font-condensed text-sm uppercase tracking-[0.14em] transition-colors duration-300",
-                    pathname === link.href
-                      ? "text-bone border-b-2 border-crest pb-1"
-                      : "text-bone-dim hover:text-bone"
+                    "inline-flex min-h-11 items-center font-condensed text-sm uppercase tracking-[0.14em] transition-colors duration-300",
+                      pathname === link.href
+                        ? "text-primary-text"
+                        : "text-secondary-text hover:text-primary-text"
                   )}
                 >
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href={action.href}
+                className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 font-condensed text-xs uppercase tracking-[0.16em] text-charcoal transition-all hover:bg-crest-hover hover:shadow-[0_4px_12px_rgba(127,29,50,0.24)]"
+              >
+                {action.label} <ArrowUpRight size={14} aria-hidden="true" />
+              </Link>
             </div>
 
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden text-bone p-3"
+              className="md:hidden text-primary-text p-3"
               aria-label="Menu"
               aria-expanded={mobileOpen}
               aria-controls="mobile-menu"
@@ -83,7 +86,7 @@ export default function Navbar() {
               {mobileOpen ? (
                 <X size={24} aria-hidden="true" />
               ) : (
-                <Menu size={24} aria-hidden="true" />
+              <Menu size={22} strokeWidth={1.5} aria-hidden="true" />
               )}
             </button>
           </div>
@@ -98,18 +101,21 @@ export default function Navbar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-40 bg-ink md:hidden"
+            className="fixed inset-0 z-40 bg-charcoal md:hidden"
           >
             <div className="flex h-full flex-col items-center justify-center gap-10">
               {links.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="font-statement text-3xl text-bone py-3"
+                  className="font-statement text-4xl text-primary-text py-3"
                 >
                   {link.label}
                 </Link>
               ))}
+              <Link href={action.href} className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-6 py-4 font-condensed text-sm uppercase tracking-[0.16em] text-charcoal">
+                {action.label} <ArrowUpRight size={16} aria-hidden="true" />
+              </Link>
             </div>
           </motion.div>
         )}

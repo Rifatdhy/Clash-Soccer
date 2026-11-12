@@ -4,28 +4,26 @@
  */
 
 /**
+ * Parse a DB date (`YYYY-MM-DD`) without letting the timezone move the day.
+ * Only call this with an exact date-only string; ISO datetimes carry their own
+ * offset and must go through `new Date`.
+ */
+export function parseDateOnly(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
  * Format date string to Indonesian locale
  * @example formatDate("2026-07-20") → "20 Jul 2026"
  */
 export function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+    ? parseDateOnly(dateStr)
+    : new Date(dateStr);
   return date.toLocaleDateString("id-ID", {
     day: "numeric",
     month: "short",
-    year: "numeric",
-  });
-}
-
-/**
- * Format date string to full Indonesian format
- * @example formatDateFull("2026-07-20") → "Senin, 20 Juli 2026"
- */
-export function formatDateFull(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
     year: "numeric",
   });
 }
@@ -36,26 +34,6 @@ export function formatDateFull(dateStr: string): string {
  */
 export function formatTime(timeStr: string): string {
   return `${timeStr} WIB`;
-}
-
-/**
- * Format ISO datetime to relative time
- * @example formatRelativeTime("2026-07-20T12:00:00") → "2 hari lalu"
- */
-export function formatRelativeTime(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMinutes < 1) return "Baru saja";
-  if (diffMinutes < 60) return `${diffMinutes} menit lalu`;
-  if (diffHours < 24) return `${diffHours} jam lalu`;
-  if (diffDays < 7) return `${diffDays} hari lalu`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} minggu lalu`;
-  return formatDate(dateStr);
 }
 
 /**

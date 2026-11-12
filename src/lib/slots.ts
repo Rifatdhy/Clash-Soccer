@@ -28,3 +28,12 @@ export function restoreSlots(
 ): number {
   return Math.min(slotsTotal, slotsAvailable + Math.max(0, released));
 }
+
+/**
+ * Availability must be a whole number inside `[0, total]`. The database has the
+ * same rule as a CHECK constraint, so a write that skips this helper still
+ * cannot persist an impossible match.
+ */
+export function slotsWithinLimits(total: number, available: number): boolean {
+  return Number.isInteger(available) && available >= 0 && available <= total;
+}

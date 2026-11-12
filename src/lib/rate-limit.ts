@@ -21,6 +21,17 @@ export const RSVP_RATE_LIMIT: RateLimitOptions = {
   max: 20,
 };
 
+/**
+ * Per-process ceiling for all login attempts. `X-Real-IP` is client-controlled
+ * unless a proxy overwrites it, so a per-IP bucket alone can be bypassed by
+ * rotating the header. This second bucket makes a brute-force run expensive
+ * even when every request claims a different address.
+ */
+export const LOGIN_GLOBAL_RATE_LIMIT: RateLimitOptions = {
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+};
+
 let configuredStore: RateLimitStore = createMemoryStore();
 const fallbackStore = createMemoryStore();
 let databaseStore: RateLimitStore | null = null;
@@ -66,6 +77,31 @@ export async function resetRateLimit(scope: string, key: string) {
   } catch (error) {
     logger.error("Failed to reset a rate limit bucket", { error });
   }
+}
+
+/**
+ * Check both the caller's own bucket and the site-wide login ceiling. A
+ * successful login resets only the caller's bucket; the global bucket is
+ * deliberately left alone so an attacker cannot reset it by logging in.
+ */
+export async function consumeLoginAttempt(
+  ip: string
+): Promise<{ allowed: boolean; retryAfterMs: number; scope: "ip" | "global" }> {
+  const perIp = await consume("login", ip, RATE_LIMIT_DEFAULTS);
+  if (!perIp.allowed) {
+    return { ...perIp, scope: "ip" };
+  }
+
+  const global = await consume("login-global", "all", LOGIN_GLOBAL_RATE_LIMIT);
+  if (!global.allowed) {
+    return { ...global, scope: "global" };
+  }
+
+  return { allowed: true, retryAfterMs: 0, scope: "ip" };
+}
+
+export async function resetLoginIpBucket(ip: string) {
+  await resetRateLimit("login", ip);
 }
 
 export function getClientIp(req: Request): string {

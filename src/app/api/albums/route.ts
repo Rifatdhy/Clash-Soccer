@@ -52,9 +52,7 @@ const albumItemSchema = z
 const albumSchema = z.object({
   id: z.string().trim().min(1, "ID is required"),
   title: z.string().trim().min(1, "Title is required"),
-  matchDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid date format",
-  }),
+  matchDate: z.iso.date("Invalid date format (expected YYYY-MM-DD)"),
   coverUrl: z.string().trim().refine(isAllowedImageUrl, "Invalid image URL"),
   gdriveLink: z
     .string()

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Oswald, Instrument_Serif, Barlow_Condensed } from "next/font/google";
 import LayoutContent from "@/components/layout-content";
-import { fetchSettings } from "@/lib/data";
+import { fetchMatches, fetchSettings } from "@/lib/data";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
 import { getSiteUrl } from "@/lib/seo";
 import type { Setting } from "@/types";
@@ -69,12 +69,24 @@ async function loadSettings(): Promise<Setting> {
   }
 }
 
+async function loadNextMatch() {
+  if (process.env.NEXT_PHASE === "phase-production-build") return null;
+  try {
+    const matches = await fetchMatches();
+    return matches
+      .filter((match) => match.status === "upcoming")
+      .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await loadSettings();
+  const [settings, nextMatch] = await Promise.all([loadSettings(), loadNextMatch()]);
 
   return (
     <html
@@ -82,7 +94,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable} ${instrumentSerif.variable} ${barlowCondensed.variable}`}
     >
       <body className="bg-charcoal text-primary-text font-sans antialiased min-h-screen flex flex-col">
-        <LayoutContent settings={settings}>{children}</LayoutContent>
+        <LayoutContent settings={settings} nextMatch={nextMatch}>{children}</LayoutContent>
       </body>
     </html>
   );

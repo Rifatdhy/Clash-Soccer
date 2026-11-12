@@ -4,6 +4,7 @@ interface SectionProps {
   children: React.ReactNode;
   className?: string;
   id?: string;
+  "data-home-schedule"?: boolean;
   spacing?: "tight" | "normal" | "loose";
 }
 
@@ -13,9 +14,9 @@ const spacingClasses = {
   loose: "py-24 md:py-36",
 } as const;
 
-export default function Section({ children, className, id, spacing = "normal" }: SectionProps) {
+export default function Section({ children, className, id, spacing = "normal", "data-home-schedule": homeSchedule }: SectionProps) {
   return (
-    <section id={id} className={cn("px-4", spacingClasses[spacing], className)}>
+    <section id={id} data-home-schedule={homeSchedule || undefined} className={cn("px-5 md:px-8", spacingClasses[spacing], className)}>
       <div className="mx-auto max-w-7xl">{children}</div>
     </section>
   );

@@ -5,12 +5,14 @@ import Image from "next/image";
 import { Plus, Trash2 } from "lucide-react";
 import Card from "@/components/card";
 import { getSettings, updateSettings, getFaqs, createFaq, updateFaq as updateFaqStore, deleteFaq } from "@/lib/settings-store";
+import { canPersistFaq } from "@/lib/faq";
 import { uploadImageFile } from "@/lib/upload-image";
 import type { FaqItem, Setting } from "@/types";
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<Setting | null>(null);
   const [faqList, setFaqList] = useState<FaqItem[] | null>(null);
+  const [draftFaqId, setDraftFaqId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,18 +63,13 @@ export default function AdminSettings() {
     }
   };
 
-  const addFaq = async () => {
+  const addFaq = () => {
     setError(null);
-    try {
-      const newFaq: FaqItem = {
-        id: `f${Date.now()}`,
-        question: "",
-        answer: "",
-      };
-      setFaqList(await createFaq(newFaq));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menambah FAQ.");
-    }
+    if (draftFaqId) return;
+
+    const id = `f${Date.now()}`;
+    setDraftFaqId(id);
+    setFaqList((current) => [...(current ?? []), { id, question: "", answer: "" }]);
   };
 
   const updateFaqDraft = (id: string, field: "question" | "answer", value: string) => {
@@ -89,6 +86,16 @@ export default function AdminSettings() {
   ) => {
     setError(null);
     try {
+      if (faq.id === draftFaqId) {
+        // A draft stays local until both fields have content. Saving one field
+        // at a time would hit the API with an empty pair and fail with a 400.
+        if (!canPersistFaq(faq)) return;
+
+        setFaqList(await createFaq(faq));
+        setDraftFaqId(null);
+        return;
+      }
+
       setFaqList(await updateFaqStore(faq.id, { [field]: faq[field] }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan FAQ.");
@@ -98,6 +105,13 @@ export default function AdminSettings() {
   const handleDeleteFaq = async (id: string) => {
     if (!window.confirm("Yakin ingin menghapus FAQ ini?")) return;
     setError(null);
+
+    if (id === draftFaqId) {
+      setFaqList((current) => (current ? current.filter((faq) => faq.id !== id) : current));
+      setDraftFaqId(null);
+      return;
+    }
+
     try {
       setFaqList(await deleteFaq(id));
     } catch (err) {

@@ -1,17 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MessageCircle } from "lucide-react";
 import PageHeader from "@/components/page-header";
 import Section from "@/components/section";
 import Card from "@/components/card";
-import { InstagramIcon } from "@/components/icons";
+import { InstagramIcon, WhatsAppIcon } from "@/components/icons";
 import type { Setting } from "@/types";
 
 export default function ContactView({ settings }: { settings: Setting }) {
   const contactItems = [
     {
-      icon: MessageCircle,
+      icon: WhatsAppIcon,
       label: "WhatsApp",
       value: settings.whatsapp,
       href: `https://wa.me/${settings.whatsapp}`,
