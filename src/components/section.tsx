@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import ScrollReveal from "./scroll-reveal";
 
 interface SectionProps {
   children: React.ReactNode;
@@ -17,7 +18,7 @@ const spacingClasses = {
 export default function Section({ children, className, id, spacing = "normal", "data-home-schedule": homeSchedule }: SectionProps) {
   return (
     <section id={id} data-home-schedule={homeSchedule || undefined} className={cn("px-5 md:px-8", spacingClasses[spacing], className)}>
-      <div className="mx-auto max-w-7xl">{children}</div>
+      <ScrollReveal className="mx-auto max-w-7xl">{children}</ScrollReveal>
     </section>
   );
 }

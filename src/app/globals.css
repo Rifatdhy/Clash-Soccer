@@ -71,6 +71,29 @@ body {
   animation: live-pulse 2.5s ease-in-out infinite;
 }
 
+[data-scroll-reveal="true"] {
+  opacity: 0;
+  transform: translate3d(0, 40px, 0) scale(0.985);
+  transition:
+    opacity 800ms cubic-bezier(0.32, 0.72, 0, 1) var(--scroll-reveal-delay, 0s),
+    transform 800ms cubic-bezier(0.32, 0.72, 0, 1) var(--scroll-reveal-delay, 0s);
+  will-change: opacity, transform;
+}
+
+[data-scroll-reveal="true"][data-scroll-reveal-visible="true"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-scroll-reveal="true"] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 .brand-wordmark { letter-spacing: -0.045em; }
 
 .paper-grid {
